@@ -23,7 +23,7 @@ public class SubtitleSyncApp {
     private static void createAndShowGUI() {
         JFrame frame = new JFrame("Dopasuj napisy do filmu");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(550, 260);
+        frame.setSize(825, 260);
         frame.setLocationRelativeTo(null);
 
         JLabel subtitleLabel = new JLabel("Nie wybrano pliku z napisami");
@@ -65,17 +65,17 @@ public class SubtitleSyncApp {
                     .map(entry -> entry.shiftBySeconds(offsetSeconds))
                     .toList();
 
-            JFileChooser chooser = new JFileChooser();
-            chooser.setDialogTitle("Zapisz plik wynikowy");
-            chooser.setSelectedFile(new File("shifted_" + subtitleFile.getName()));
-            int result = chooser.showSaveDialog(frame);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                try {
-                    writeSrt(chooser.getSelectedFile(), shifted);
-                    showMessage(frame, "Zapisano plik.", "Sukces");
-                } catch (IOException ex) {
-                    showMessage(frame, "Nie udało się zapisać pliku.", "Błąd");
-                }
+            String name = subtitleFile.getName();
+            int dot = name.lastIndexOf('.');
+            String base = (dot == -1) ? name : name.substring(0, dot);
+            String shiftedName = base + "_shifted.srt";
+            File outputFile = new File(subtitleFile.getParentFile(), shiftedName);
+
+            try {
+                writeSrt(outputFile, shifted);
+                showMessage(frame, "Zapisano jako:\n" + shiftedName, "Sukces");
+            } catch (IOException ex) {
+                showMessage(frame, "Nie udało się zapisać pliku.", "Błąd");
             }
         });
 
@@ -86,8 +86,32 @@ public class SubtitleSyncApp {
         panel.add(buildRow(subtitleButton, subtitleLabel));
         panel.add(Box.createVerticalStrut(10));
         panel.add(new JLabel("Przesunięcie napisów (sekundy):"));
-        panel.add(slider);
+
+        JPanel sliderPanel = new JPanel(new BorderLayout());
+        JButton minusButton = new JButton("−");
+        JButton plusButton = new JButton("+");
+
+        minusButton.addActionListener(e -> {
+            int val = slider.getValue();
+            if (val > slider.getMinimum()) {
+                slider.setValue(val - 1);
+            }
+        });
+
+        plusButton.addActionListener(e -> {
+            int val = slider.getValue();
+            if (val < slider.getMaximum()) {
+                slider.setValue(val + 1);
+            }
+        });
+
+        sliderPanel.add(minusButton, BorderLayout.WEST);
+        sliderPanel.add(slider, BorderLayout.CENTER);
+        sliderPanel.add(plusButton, BorderLayout.EAST);
+
+        panel.add(sliderPanel);
         panel.add(offsetValueLabel);
+
         panel.add(Box.createVerticalStrut(15));
         panel.add(saveButton);
 
