@@ -13,133 +13,173 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SubtitleSyncApp {
-
-    private static File subtitleFile;
-
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(SubtitleSyncApp::createAndShowGUI);
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Dopasuj napisy do filmu");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(825, 260);
+            frame.setLocationRelativeTo(null);
+
+            SubtitleSyncPanel panel = new SubtitleSyncPanel();
+            frame.setContentPane(panel);
+            frame.setVisible(true);
+        });
+    }
+}
+
+class SubtitleSyncPanel extends JPanel {
+    private static final int SLIDER_MIN = -60;
+    private static final int SLIDER_MAX = 60;
+    private static final int SLIDER_MAJOR_TICK_SPACING = 20;
+    private static final int SLIDER_MINOR_TICK_SPACING = 5;
+
+    private final SubtitleService subtitleService;
+    private File currentSubtitleFile;
+
+    private JLabel subtitleLabel;
+    private JLabel offsetValueLabel;
+    private JSlider offsetSlider;
+    private JButton subtitleButton;
+    private JButton saveButton;
+
+    public SubtitleSyncPanel() {
+        this.subtitleService = new SubtitleService();
+        initializeComponents();
+        layoutComponents();
+        setupEventHandlers();
     }
 
-    private static void createAndShowGUI() {
-        JFrame frame = new JFrame("Dopasuj napisy do filmu");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(825, 260);
-        frame.setLocationRelativeTo(null);
+    private void initializeComponents() {
+        subtitleLabel = new JLabel("Nie wybrano pliku z napisami");
+        offsetValueLabel = new JLabel("0.0 s");
 
-        JLabel subtitleLabel = new JLabel("Nie wybrano pliku z napisami");
-        JLabel offsetValueLabel = new JLabel("0.0 s");
+        subtitleButton = new JButton("Wybierz plik SRT");
+        saveButton = new JButton("Zapisz nowe napisy");
 
-        JButton subtitleButton = new JButton("Wybierz plik SRT");
-        subtitleButton.addActionListener(e -> {
-            File selected = chooseFile(frame, "Wybierz plik SRT", "srt");
-            if (selected != null) {
-                subtitleFile = selected;
-                subtitleLabel.setText(selected.getName());
-            }
-        });
+        offsetSlider = new JSlider(JSlider.HORIZONTAL, SLIDER_MIN, SLIDER_MAX, 0);
+        offsetSlider.setMajorTickSpacing(SLIDER_MAJOR_TICK_SPACING);
+        offsetSlider.setMinorTickSpacing(SLIDER_MINOR_TICK_SPACING);
+        offsetSlider.setPaintTicks(true);
+        offsetSlider.setPaintLabels(true);
+    }
 
-        JSlider slider = new JSlider(JSlider.HORIZONTAL, -60, 60, 0);
-        slider.setMajorTickSpacing(20);
-        slider.setMinorTickSpacing(5);
-        slider.setPaintTicks(true);
-        slider.setPaintLabels(true);
-        slider.addChangeListener(e -> offsetValueLabel.setText(slider.getValue() + ".0 s"));
+    private void layoutComponents() {
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        JButton saveButton = new JButton("Zapisz nowe napisy");
-        saveButton.addActionListener(event -> {
-            if (subtitleFile == null) {
-                showMessage(frame, "Nie wybrano pliku z napisami.", "Błąd");
-                return;
-            }
+        // Sekcja wyboru pliku
+        add(createFileSelectionPanel());
+        add(Box.createVerticalStrut(10));
 
-            List<SubtitleEntry> entries;
-            try {
-                entries = parseSrt(subtitleFile);
-            } catch (IOException ex) {
-                showMessage(frame, "Nie udało się wczytać pliku z napisami.", "Błąd");
-                return;
-            }
+        // Sekcja przesunięcia
+        add(new JLabel("Przesunięcie napisów (sekundy):"));
+        add(createOffsetPanel());
+        add(offsetValueLabel);
 
-            double offsetSeconds = slider.getValue();
-            List<SubtitleEntry> shifted = entries.stream()
-                    .map(entry -> entry.shiftBySeconds(offsetSeconds))
-                    .toList();
+        add(Box.createVerticalStrut(15));
+        add(saveButton);
+    }
 
-            String name = subtitleFile.getName();
-            int dot = name.lastIndexOf('.');
-            String base = (dot == -1) ? name : name.substring(0, dot);
-            String shiftedName = base + "_shifted.srt";
-            File outputFile = new File(subtitleFile.getParentFile(), shiftedName);
+    private JPanel createFileSelectionPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.add(subtitleButton, BorderLayout.WEST);
+        panel.add(subtitleLabel, BorderLayout.CENTER);
+        return panel;
+    }
 
-            try {
-                writeSrt(outputFile, shifted);
-                showMessage(frame, "Zapisano jako:\n" + shiftedName, "Sukces");
-            } catch (IOException ex) {
-                showMessage(frame, "Nie udało się zapisać pliku.", "Błąd");
-            }
-        });
+    private JPanel createOffsetPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-
-        panel.add(buildRow(subtitleButton, subtitleLabel));
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(new JLabel("Przesunięcie napisów (sekundy):"));
-
-        JPanel sliderPanel = new JPanel(new BorderLayout());
         JButton minusButton = new JButton("−");
         JButton plusButton = new JButton("+");
 
-        minusButton.addActionListener(e -> {
-            int val = slider.getValue();
-            if (val > slider.getMinimum()) {
-                slider.setValue(val - 1);
-            }
-        });
+        minusButton.addActionListener(e -> adjustOffset(-1));
+        plusButton.addActionListener(e -> adjustOffset(+1));
 
-        plusButton.addActionListener(e -> {
-            int val = slider.getValue();
-            if (val < slider.getMaximum()) {
-                slider.setValue(val + 1);
-            }
-        });
+        panel.add(minusButton, BorderLayout.WEST);
+        panel.add(offsetSlider, BorderLayout.CENTER);
+        panel.add(plusButton, BorderLayout.EAST);
 
-        sliderPanel.add(minusButton, BorderLayout.WEST);
-        sliderPanel.add(slider, BorderLayout.CENTER);
-        sliderPanel.add(plusButton, BorderLayout.EAST);
-
-        panel.add(sliderPanel);
-        panel.add(offsetValueLabel);
-
-        panel.add(Box.createVerticalStrut(15));
-        panel.add(saveButton);
-
-        frame.setContentPane(panel);
-        frame.setVisible(true);
+        return panel;
     }
 
-    private static JPanel buildRow(JComponent left, JComponent right) {
-        JPanel row = new JPanel(new BorderLayout(10, 0));
-        row.add(left, BorderLayout.WEST);
-        row.add(right, BorderLayout.CENTER);
-        return row;
+    private void setupEventHandlers() {
+        subtitleButton.addActionListener(e -> handleFileSelection());
+        saveButton.addActionListener(e -> handleSaveAction());
+        offsetSlider.addChangeListener(e -> updateOffsetLabel());
     }
 
-    private static File chooseFile(Component parent, String title, String... extensions) {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle(title);
-        chooser.setFileFilter(new FileNameExtensionFilter(title, extensions));
-        int result = chooser.showOpenDialog(parent);
-        return result == JFileChooser.APPROVE_OPTION ? chooser.getSelectedFile() : null;
+    private void handleFileSelection() {
+        File selectedFile = FileChooserHelper.chooseFile(this, "Wybierz plik SRT", "srt");
+
+        if (selectedFile != null) {
+            currentSubtitleFile = selectedFile;
+            subtitleLabel.setText(selectedFile.getName());
+        }
     }
 
-    private static void showMessage(Component parent, String msg, String title) {
-        JOptionPane.showMessageDialog(parent, msg, title, JOptionPane.INFORMATION_MESSAGE);
+    private void handleSaveAction() {
+        if (currentSubtitleFile == null) {
+            showError("Nie wybrano pliku z napisami.");
+            return;
+        }
+
+        try {
+            double offsetSeconds = offsetSlider.getValue();
+            File outputFile = subtitleService.createShiftedSubtitles(currentSubtitleFile, offsetSeconds);
+
+            showSuccess("Zapisano jako:\n" + outputFile.getName());
+        } catch (IOException ex) {
+            showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
+        }
     }
 
-    private static List<SubtitleEntry> parseSrt(File file) throws IOException {
-        List<SubtitleEntry> list = new ArrayList<>();
+    private void adjustOffset(int delta) {
+        int currentValue = offsetSlider.getValue();
+        int newValue = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, currentValue + delta));
+        offsetSlider.setValue(newValue);
+    }
+
+    private void updateOffsetLabel() {
+        offsetValueLabel.setText(offsetSlider.getValue() + ".0 s");
+    }
+
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Błąd", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Sukces", JOptionPane.INFORMATION_MESSAGE);
+    }
+}
+
+class SubtitleService {
+
+    public File createShiftedSubtitles(File inputFile, double offsetSeconds) throws IOException {
+        List<SubtitleEntry> entries = parseSrt(inputFile);
+
+        List<SubtitleEntry> shiftedEntries = entries.stream()
+                .map(entry -> entry.shiftBySeconds(offsetSeconds))
+                .toList();
+
+        File outputFile = generateOutputFile(inputFile);
+
+        writeSrt(outputFile, shiftedEntries);
+
+        return outputFile;
+    }
+
+    private File generateOutputFile(File inputFile) {
+        String name = inputFile.getName();
+        int dotIndex = name.lastIndexOf('.');
+        String baseName = (dotIndex == -1) ? name : name.substring(0, dotIndex);
+        String outputName = baseName + "_shifted.srt";
+
+        return new File(inputFile.getParentFile(), outputName);
+    }
+
+    private List<SubtitleEntry> parseSrt(File file) throws IOException {
+        List<SubtitleEntry> entries = new ArrayList<>();
         List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
         int i = 0;
 
@@ -158,58 +198,70 @@ public class SubtitleSyncApp {
                 while (i < lines.size() && !lines.get(i).isBlank()) {
                     text.append(lines.get(i++)).append("\n");
                 }
-                list.add(SubtitleEntry.parse(index, timeLine, text.toString().trim()));
+                entries.add(SubtitleEntry.parse(index, timeLine, text.toString().trim()));
             } else {
                 i++;
             }
         }
 
-        return list;
+        return entries;
     }
 
-    private static void writeSrt(File file, List<SubtitleEntry> entries) throws IOException {
+    private void writeSrt(File file, List<SubtitleEntry> entries) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
-            for (SubtitleEntry e : entries) {
-                writer.write(e.toSrtBlock());
+            for (SubtitleEntry entry : entries) {
+                writer.write(entry.toSrtBlock());
                 writer.write("\n\n");
             }
         }
     }
+}
 
-    private record SubtitleEntry(int index, Duration start, Duration end, String text) {
+class FileChooserHelper {
 
-        static SubtitleEntry parse(int index, String timeLine, String text) {
-            Pattern pattern = Pattern.compile("(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})");
-            Matcher m = pattern.matcher(timeLine);
-            Duration start = Duration.ZERO;
-            Duration end = Duration.ZERO;
-            if (m.find()) start = toDuration(m);
-            if (m.find()) end = toDuration(m);
-            return new SubtitleEntry(index, start, end, text);
-        }
+    public static File chooseFile(Component parent, String title, String... extensions) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle(title);
+        chooser.setFileFilter(new FileNameExtensionFilter(title, extensions));
 
-        static Duration toDuration(Matcher m) {
-            return Duration.ofHours(Integer.parseInt(m.group(1)))
-                    .plusMinutes(Integer.parseInt(m.group(2)))
-                    .plusSeconds(Integer.parseInt(m.group(3)))
-                    .plusMillis(Integer.parseInt(m.group(4)));
-        }
+        int result = chooser.showOpenDialog(parent);
+        return result == JFileChooser.APPROVE_OPTION ? chooser.getSelectedFile() : null;
+    }
+}
 
-        SubtitleEntry shiftBySeconds(double seconds) {
-            Duration shift = Duration.ofMillis((long) (seconds * 1000));
-            return new SubtitleEntry(index, start.plus(shift), end.plus(shift), text);
-        }
+record SubtitleEntry(int index, Duration start, Duration end, String text) {
 
-        String toSrtBlock() {
-            return "%d\n%s --> %s\n%s".formatted(index, formatTime(start), formatTime(end), text);
-        }
+    static SubtitleEntry parse(int index, String timeLine, String text) {
+        Pattern pattern = Pattern.compile("(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})");
+        Matcher m = pattern.matcher(timeLine);
+        Duration start = Duration.ZERO;
+        Duration end = Duration.ZERO;
+        if (m.find()) start = toDuration(m);
+        if (m.find()) end = toDuration(m);
+        return new SubtitleEntry(index, start, end, text);
+    }
 
-        String formatTime(Duration d) {
-            long h = d.toHours();
-            long m = d.toMinutesPart();
-            long s = d.toSecondsPart();
-            long ms = d.toMillisPart();
-            return String.format("%02d:%02d:%02d,%03d", h, m, s, ms);
-        }
+    static Duration toDuration(Matcher m) {
+        return Duration.ofHours(Integer.parseInt(m.group(1)))
+                .plusMinutes(Integer.parseInt(m.group(2)))
+                .plusSeconds(Integer.parseInt(m.group(3)))
+                .plusMillis(Integer.parseInt(m.group(4)));
+    }
+
+    SubtitleEntry shiftBySeconds(double seconds) {
+        Duration shift = Duration.ofMillis((long) (seconds * 1000));
+        return new SubtitleEntry(index, start.plus(shift), end.plus(shift), text);
+    }
+
+    String toSrtBlock() {
+        return "%d\n%s --> %s\n%s".formatted(index, formatTime(start), formatTime(end), text);
+    }
+
+    String formatTime(Duration duration) {
+        return String.format("%02d:%02d:%02d,%03d",
+                duration.toHours(),
+                duration.toMinutesPart(),
+                duration.toSecondsPart(),
+                duration.toMillisPart());
     }
 }
