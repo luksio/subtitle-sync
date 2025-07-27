@@ -250,7 +250,9 @@ record SubtitleEntry(int index, Duration start, Duration end, String text) {
 
     SubtitleEntry shiftBySeconds(double seconds) {
         Duration shift = Duration.ofMillis((long) (seconds * 1000));
-        return new SubtitleEntry(index, start.plus(shift), end.plus(shift), text);
+        Duration newStart = start.plus(shift).isNegative() ? Duration.ZERO : start.plus(shift);
+        Duration newEnd = end.plus(shift).isNegative() ? Duration.ZERO : end.plus(shift);
+        return new SubtitleEntry(index, newStart, newEnd, text);
     }
 
     String toSrtBlock() {
