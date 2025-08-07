@@ -1,5 +1,7 @@
 package app.model;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,6 +29,23 @@ public record SubtitleEntry(int index, Duration start, Duration end, String text
         Duration shift = Duration.ofMillis((long) (seconds * 1000));
         Duration newStart = start.plus(shift).isNegative() ? Duration.ZERO : start.plus(shift);
         Duration newEnd = end.plus(shift).isNegative() ? Duration.ZERO : end.plus(shift);
+        return new SubtitleEntry(index, newStart, newEnd, text);
+    }
+
+    public SubtitleEntry convertFrameRate(BigDecimal conversionRatio) {
+        BigDecimal startMillisBD = BigDecimal.valueOf(start.toMillis())
+                .multiply(conversionRatio)
+                .setScale(3, RoundingMode.HALF_UP);
+        BigDecimal endMillisBD = BigDecimal.valueOf(end.toMillis())
+                .multiply(conversionRatio)
+                .setScale(3, RoundingMode.HALF_UP);
+
+        long startMillis = Math.max(0, startMillisBD.longValue());
+        long endMillis = Math.max(0, endMillisBD.longValue());
+
+        Duration newStart = Duration.ofMillis(startMillis);
+        Duration newEnd = Duration.ofMillis(endMillis);
+
         return new SubtitleEntry(index, newStart, newEnd, text);
     }
 
