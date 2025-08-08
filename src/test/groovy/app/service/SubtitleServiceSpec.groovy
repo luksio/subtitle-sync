@@ -80,7 +80,7 @@ Subtitle after hour
 Subtitle just after hour
 
 3
-00:00:30,500 --> 00:00:33,000
+00:00:30,500 --> 00:00:66,500
 Early subtitle that would go negative
 '''
         and: 'negative offset of 1 minute and 5.5 seconds'
@@ -96,7 +96,7 @@ Subtitle after hour
 Subtitle just after hour
 
 3
-00:00:00,000 --> 00:00:00,000
+00:00:00,000 --> 00:00:01,000
 Early subtitle that would go negative
 
 '''
@@ -473,7 +473,7 @@ UPPERCASE TEXT
             content.contains('00:01:02,500 --> 00:01:04,583')
             content.contains('00:02:05,000 --> 00:02:08,125')
     }
-    
+
     private File createTempSrtFile(String fileName, String content) {
         def file = tempDir.resolve(fileName).toFile()
         file.text = content

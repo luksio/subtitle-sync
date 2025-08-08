@@ -2,6 +2,7 @@ package app.service;
 
 import app.model.FrameRate;
 import lombok.extern.java.Log;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,7 +20,6 @@ public class VideoMetadataService {
         }
 
         try {
-            // Sprawdź czy ffprobe jest dostępne
             if (!isFFprobeAvailable()) {
                 log.warning("FFprobe nie jest dostępne w systemie");
                 return Optional.empty();
@@ -58,9 +58,8 @@ public class VideoMetadataService {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String output = reader.readLine();
 
-            if (output != null && !output.trim().isEmpty()) {
-                // Parsuj wynik w formacie "num/den" (np. "25/1" lub "24000/1001")
-                String[] parts = output.trim().split("/");
+            if (StringUtils.isNotBlank(output)) {
+                String[] parts = StringUtils.split(StringUtils.trim(output), "/");
                 if (parts.length == 2) {
                     double numerator = Double.parseDouble(parts[0]);
                     double denominator = Double.parseDouble(parts[1]);

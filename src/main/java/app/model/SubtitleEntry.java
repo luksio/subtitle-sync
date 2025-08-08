@@ -1,5 +1,8 @@
 package app.model;
 
+import app.exception.InvalidSubtitleException;
+import org.apache.commons.lang3.StringUtils;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -8,21 +11,70 @@ import java.util.regex.Pattern;
 
 public record SubtitleEntry(int index, Duration start, Duration end, String text) {
 
+    public SubtitleEntry {
+        validate(index, start, end, text);
+    }
+
+    private static void validate(int index, Duration start, Duration end, String text) {
+        if (index <= 0) {
+            throw InvalidSubtitleException.invalidIndex(index, start, end, text);
+        }
+
+        if (start == null) {
+            throw InvalidSubtitleException.nullStartTime(index, end, text);
+        }
+
+        if (end == null) {
+            throw InvalidSubtitleException.nullEndTime(index, start, text);
+        }
+
+        if (start.isNegative()) {
+            throw InvalidSubtitleException.negativeStartTime(index, start, end, text);
+        }
+
+        if (end.compareTo(start) <= 0) {
+            throw InvalidSubtitleException.endBeforeStart(index, start, end, text);
+        }
+
+        if (StringUtils.isBlank(text)) {
+            throw InvalidSubtitleException.blankText(index, start, end, text);
+        }
+    }
+
     public static SubtitleEntry parse(int index, String timeLine, String text) {
+        if (StringUtils.isBlank(timeLine)) {
+            throw InvalidSubtitleException.emptyTimeline(index, text);
+        }
+
         Pattern pattern = Pattern.compile("(\\d{2}):(\\d{2}):(\\d{2}),(\\d{3})");
         Matcher m = pattern.matcher(timeLine);
         Duration start = Duration.ZERO;
         Duration end = Duration.ZERO;
-        if (m.find()) start = toDuration(m);
-        if (m.find()) end = toDuration(m);
-        return new SubtitleEntry(index, start, end, text);
+
+        if (m.find()) {
+            start = toDuration(m);
+        } else {
+            throw InvalidSubtitleException.invalidTimelineFormat(index, timeLine, text);
+        }
+
+        if (m.find()) {
+            end = toDuration(m);
+        } else {
+            throw InvalidSubtitleException.missingEndTime(index, timeLine, start, text);
+        }
+
+        return new SubtitleEntry(index, start, end, StringUtils.trim(text));
     }
 
     private static Duration toDuration(Matcher m) {
-        return Duration.ofHours(Integer.parseInt(m.group(1)))
-                .plusMinutes(Integer.parseInt(m.group(2)))
-                .plusSeconds(Integer.parseInt(m.group(3)))
-                .plusMillis(Integer.parseInt(m.group(4)));
+        try {
+            return Duration.ofHours(Integer.parseInt(m.group(1)))
+                    .plusMinutes(Integer.parseInt(m.group(2)))
+                    .plusSeconds(Integer.parseInt(m.group(3)))
+                    .plusMillis(Integer.parseInt(m.group(4)));
+        } catch (NumberFormatException e) {
+            throw InvalidSubtitleException.invalidTimeFormat(m.group(), e);
+        }
     }
 
     public SubtitleEntry shiftBySeconds(double seconds) {

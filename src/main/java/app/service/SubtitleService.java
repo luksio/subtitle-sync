@@ -2,6 +2,7 @@ package app.service;
 
 import app.model.SubtitleEntry;
 import app.model.FrameRate;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -59,21 +60,22 @@ public class SubtitleService {
         int i = 0;
 
         while (i < lines.size()) {
-            String line = lines.get(i).trim();
+            String line = StringUtils.trim(lines.get(i));
 
-            if (i == 0 && !line.isEmpty() && line.charAt(0) == '\uFEFF') {
+            // Handle BOM
+            if (i == 0 && StringUtils.isNotEmpty(line) && line.charAt(0) == '\uFEFF') {
                 line = line.substring(1);
             }
 
-            if (line.matches("\\d+")) {
+            if (StringUtils.isNumeric(line)) {
                 int index = Integer.parseInt(line);
-                String timeLine = lines.get(++i).trim();
+                String timeLine = StringUtils.trim(lines.get(++i));
                 StringBuilder text = new StringBuilder();
                 i++;
-                while (i < lines.size() && !lines.get(i).isBlank()) {
+                while (i < lines.size() && StringUtils.isNotBlank(lines.get(i))) {
                     text.append(lines.get(i++)).append("\n");
                 }
-                entries.add(SubtitleEntry.parse(index, timeLine, text.toString().trim()));
+                entries.add(SubtitleEntry.parse(index, timeLine, StringUtils.trim(text.toString())));
             } else {
                 i++;
             }
