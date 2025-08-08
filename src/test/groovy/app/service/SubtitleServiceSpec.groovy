@@ -80,7 +80,7 @@ Subtitle after hour
 Subtitle just after hour
 
 3
-00:00:30,500 --> 00:00:66,500
+00:01:06,500 --> 00:01:10,500
 Early subtitle that would go negative
 '''
         and: 'negative offset of 1 minute and 5.5 seconds'
@@ -96,7 +96,7 @@ Subtitle after hour
 Subtitle just after hour
 
 3
-00:00:00,000 --> 00:00:01,000
+00:00:01,000 --> 00:00:05,000
 Early subtitle that would go negative
 
 '''
@@ -108,6 +108,29 @@ Early subtitle that would go negative
         then: 'times are correctly adjusted with hour boundary crossing and negative values clamped to zero'
             outputFile.text == expectedOutput
     }
+
+    def 'should handle very large positive offset with correct carry over'() {
+        given:
+            def inputContent = '''1
+00:59:59,900 --> 01:00:00,100
+Boundary test
+'''
+            def offsetSeconds = 3661.250 // 1h 1s 250ms
+
+            def expectedOutput = '''1
+02:01:01,150 --> 02:01:01,350
+Boundary test
+
+'''
+
+        when:
+            def inputFile = createTempSrtFile('large_offset.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
 
     def 'should preserve subtitle numbering and text formatting'() {
         given: 'input SRT file with various formatting'
@@ -230,6 +253,115 @@ Test subtitle
         then: 'output is identical to input'
             outputFile.text == expectedOutput
     }
+
+    def 'should handle sub-millisecond rounding correctly'() {
+        given:
+            def inputContent = '''1
+00:00:00,999 --> 00:00:01,000
+Edge millis
+'''
+            def offsetSeconds = 0.002 // +2 ms
+            def expectedOutput = '''1
+00:00:01,001 --> 00:00:01,002
+Edge millis
+
+'''
+
+        when:
+            def inputFile = createTempSrtFile('millis.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
+
+    def 'should parse file without trailing blank line after last block'() {
+        given:
+            def inputContent = '1\n00:00:01,000 --> 00:00:02,000\nNo trailing blank'
+            def expectedOutput = '''1
+00:00:02,000 --> 00:00:03,000
+No trailing blank
+
+'''
+            def offsetSeconds = 1.0
+
+        when:
+            def inputFile = createTempSrtFile('no_trailing_blank.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
+    def 'should handle extra spaces and tabs in timeline'() {
+        given:
+            def inputContent = '''1
+  00:00:01,000     -->   00:00:03,000
+Weird spacing
+'''
+            def expectedOutput = '''1
+00:00:02,000 --> 00:00:04,000
+Weird spacing
+
+'''
+            def offsetSeconds = 1.0
+
+        when:
+            def inputFile = createTempSrtFile('spaces.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
+    def 'should produce empty output for empty input file'() {
+        given:
+            def inputContent = ''
+            def offsetSeconds = 1.0
+
+        when:
+            def inputFile = createTempSrtFile('empty.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.exists()
+            outputFile.text == ''
+    }
+
+    def 'should not treat numeric text line as next index'() {
+        given:
+            def inputContent = '''1
+00:00:01,000 --> 00:00:03,000
+Line with number:
+123
+and more
+
+2
+00:00:04,000 --> 00:00:05,000
+OK
+'''
+            def offsetSeconds = 1.0
+            def expectedOutput = '''1
+00:00:02,000 --> 00:00:04,000
+Line with number:
+123
+and more
+
+2
+00:00:05,000 --> 00:00:06,000
+OK
+
+'''
+
+        when:
+            def inputFile = createTempSrtFile('numeric_text.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
 
     // test frame rate conversion
 
@@ -386,6 +518,31 @@ One second subtitle
         then: 'timing is correctly adjusted'
             outputFile.text == expectedOutput
     }
+
+    def 'should propagate carry correctly in frame rate conversion with millisecond rounding'() {
+        given:
+            def inputContent = '''1
+01:59:59,999 --> 02:00:00,001
+Boundary FR
+'''
+        and:
+            def fromFrameRate = FrameRate.FPS_23_976
+            def toFrameRate = FrameRate.FPS_25
+        and:
+            def expectedOutput = '''1
+01:55:05,087 --> 01:55:05,088
+Boundary FR
+
+'''
+
+        when:
+            def inputFile = createTempSrtFile('fr_boundary.srt', inputContent)
+            def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
+
+        then:
+            outputFile.text == expectedOutput
+    }
+
 
     def 'should throw IllegalArgumentException when frame rates are identical'() {
         given: 'input SRT file'
