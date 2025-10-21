@@ -3,13 +3,16 @@ package app.ui;
 import app.model.FrameRate;
 import app.service.SubtitleService;
 import app.service.VideoMetadataService;
+import lombok.extern.java.Log;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.logging.Level;
 
+@Log
 public class SubtitleSyncPanel extends JPanel {
     private static final int SLIDER_MIN = -60;
     private static final int SLIDER_MAX = 60;
@@ -184,7 +187,6 @@ public class SubtitleSyncPanel extends JPanel {
     }
 
     private void handleVideoFrameRateDetection() {
-        // Obsługuj różne formaty wideo
         String[] videoExtensions = {"mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"};
         File selectedFile = FileChooserHelper.chooseFile(this, "Wybierz plik wideo", videoExtensions);
 
@@ -220,7 +222,8 @@ public class SubtitleSyncPanel extends JPanel {
             double offsetSeconds = offsetSlider.getValue();
             File outputFile = subtitleService.createShiftedSubtitles(currentSubtitleFile, offsetSeconds);
             showSuccess("Zapisano przesunięte napisy jako:\n" + outputFile.getName());
-        } catch (IOException ex) {
+        } catch (Exception ex) {
+            log.log(Level.SEVERE, "Nie udało się przetworzyć pliku podczas przesuwania napisów: " + currentSubtitleFile, ex);
             showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
         }
     }
@@ -243,10 +246,15 @@ public class SubtitleSyncPanel extends JPanel {
             File outputFile = subtitleService.createFrameRateConvertedSubtitles(
                     currentSubtitleFile, fromFrameRate, toFrameRate);
             showSuccess("Zapisano przekonwertowane napisy jako:\n" + outputFile.getName());
-        } catch (IOException ex) {
-            showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
         } catch (IllegalArgumentException ex) {
+            log.log(Level.WARNING, "Błąd parametrów przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
             showError("Błąd parametrów: " + ex.getMessage());
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "Błąd IO przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
+            showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
+        } catch (Exception ex) {
+            log.log(Level.SEVERE, "Nieoczekiwany błąd przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
+            showError("Wystąpił nieoczekiwany błąd: " + ex.getMessage());
         }
     }
 

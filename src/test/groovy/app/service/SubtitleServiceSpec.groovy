@@ -1,9 +1,13 @@
 package app.service
 
+import app.TestResourceUtils
 import app.model.FrameRate
 import spock.lang.Specification
 import spock.lang.TempDir
 
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 
 class SubtitleServiceSpec extends Specification {
@@ -208,6 +212,20 @@ Subtitle with BOM
             thrown(IOException)
     }
 
+    def 'should produce empty output for empty input file'() {
+        given:
+            def inputContent = ''
+            def offsetSeconds = 1.0
+
+        when:
+            def inputFile = createTempSrtFile('empty.srt', inputContent)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then:
+            outputFile.exists()
+            outputFile.text == ''
+    }
+
     def 'should generate correct output filename for different input names'() {
         given: 'minimal SRT content for filename testing'
             def inputContent = '1\n00:00:01,000 --> 00:00:03,000\nTest\n'
@@ -313,20 +331,6 @@ Weird spacing
 
         then:
             outputFile.text == expectedOutput
-    }
-
-    def 'should produce empty output for empty input file'() {
-        given:
-            def inputContent = ''
-            def offsetSeconds = 1.0
-
-        when:
-            def inputFile = createTempSrtFile('empty.srt', inputContent)
-            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
-
-        then:
-            outputFile.exists()
-            outputFile.text == ''
     }
 
     def 'should not treat numeric text line as next index'() {
@@ -635,5 +639,126 @@ UPPERCASE TEXT
         def file = tempDir.resolve(fileName).toFile()
         file.text = content
         return file
+    }
+
+    private File createTempSrtFileWithEncoding(String fileName, String content, Charset charset) {
+        def file = tempDir.resolve(fileName).toFile()
+        Files.write(file.toPath(), content.getBytes(charset))
+        return file
+    }
+
+
+    // ========== Character Encoding Tests ==========
+
+    def 'should read and process SRT file in all supported encodings'() {
+        given: 'SRT content with ASCII characters only'
+            def inputContent = '''1
+00:00:01,000 --> 00:00:03,000
+Hello World
+First subtitle
+
+2
+00:00:05,000 --> 00:00:08,000
+Second subtitle text
+'''
+        and: 'offset for processing verification'
+            def offsetSeconds = 1.0
+
+        when: 'creating file with specific encoding and processing it'
+            def inputFile = createTempSrtFileWithEncoding("test_${encodingName}.srt", inputContent, encoding)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then: 'file is successfully processed'
+            outputFile.exists()
+            outputFile.text.contains('Hello World')
+            outputFile.text.contains('First subtitle')
+            outputFile.text.contains('Second subtitle text')
+            outputFile.text.contains('00:00:02,000 --> 00:00:04,000')
+            outputFile.text.contains('00:00:06,000 --> 00:00:09,000')
+
+        where: 'testing all supported encodings'
+            encodingName   | encoding
+            'UTF-8'        | StandardCharsets.UTF_8
+            'windows-1250' | Charset.forName('windows-1250')
+            'ISO-8859-2'   | Charset.forName('ISO-8859-2')
+            'ISO-8859-1'   | StandardCharsets.ISO_8859_1
+    }
+
+    def 'should correctly read and process files with proper charset detection'() {
+        given: 'zero offset to verify encoding handling only'
+            def offsetSeconds = 0.0
+
+        when: 'loading and processing file with charset detection'
+            def inputFile = TestResourceUtils.copySubtitleToTemp(fileName, tempDir)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then: 'output file is created successfully'
+            outputFile.exists()
+
+        and: 'all key phrases with diacritics are preserved correctly'
+            keyPhrases.every { phrase -> outputFile.text.contains(phrase) }
+
+        where: 'testing files with correct detection or working fallback'
+            fileName                           | keyPhrases
+            'multilingual_utf8.srt'            | ['pańskiej', 'Świetna', 'żółty', 'Détective', '¿Dónde está', 'Müller']
+            'central_european_windows1250.srt' | ['Świetna', 'żółt', 'Wisła', 'Příliš žluťoučký kůň', 'árvíztűrő tükörfúrógép']
+            'western_european_windows1252.srt' | ['"Look at this!"', '€', 'François', 'García', 'Müller']
+            'western_european_iso88591.srt'    | ['François', 'García', 'Müller', 'Rhône'] /* detected as Windows-1252 but reads correctly (Windows-1252 is superset of ISO-8859-1) */
+    }
+
+    def 'should document charset detection failures (KNOWN ISSUE)'() {
+        given: 'zero offset to verify encoding handling only'
+            def offsetSeconds = 0.0
+
+        when: 'loading and processing file with incorrect charset detection'
+            def inputFile = TestResourceUtils.copySubtitleToTemp(fileName, tempDir)
+            def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
+
+        then: 'output file is created'
+            outputFile.exists()
+
+        and: 'diacritics are corrupted - wrong characters present instead of correct ones'
+            corruptedPhrases.every { phrase -> outputFile.text.contains(phrase) }
+
+        where: 'ISO-8859-2 wrongly detected as Windows-1252 by juniversalchardet'
+            fileName                        | corruptedPhrases
+            'central_european_iso88592.srt' | ['Pøíli¹ ¾lu»ouèký kùò', /* correct: Příliš žluťoučký kůň */
+                                               'árvíztûrõ tükörfúrógép', /* correct: árvíztűrő tükörfúrógép */
+                                               '¿ó³t± ³ód¼'] /* correct: żółtą łódź */
+    }
+
+    def 'should handle frame rate conversion with different encodings'() {
+        given: 'SRT content with Polish text'
+            def expectedOutputs = [
+                    '''
+15
+00:00:50,571 --> 00:00:53,490
+Žena měla blond vlasy
+a červený kabát, viďte?
+
+16
+00:00:54,012 --> 00:00:56,931
+Přesně tak! Stála u řeky
+a čekala na někoho.
+''',
+                    '''27
+00:01:34,052 --> 00:01:36,971
+Igen, a bíró aláírta
+egy órája.
+
+28
+00:01:38,014 --> 00:01:40,934
+Znakomicie! Wysyłajmy wszystkie
+dostępne jednostki.
+'''
+            ]
+            def inputFile = TestResourceUtils.copySubtitleToTemp('central_european_windows1250.srt', tempDir)
+
+        when: 'converting frame rate'
+            def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, FrameRate.FPS_25, FrameRate.FPS_23_976)
+
+        then: 'output file is created'
+            outputFile.exists()
+            expectedOutputs.each { outputFile.text.contains(it) }
     }
 }

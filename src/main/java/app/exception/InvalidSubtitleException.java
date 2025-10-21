@@ -116,6 +116,12 @@ public class InvalidSubtitleException extends IllegalArgumentException {
                 .build();
     }
 
+    public static InvalidSubtitleException undetectableCharset(String fileName) {
+        return InvalidSubtitleException.builder()
+                .baseMessage("Could not detect charset for file: " + fileName + ". The file may be corrupted or use an unsupported encoding.")
+                .build();
+    }
+
     private static String buildDetailedMessage(String baseMessage, Integer subtitleIndex, Duration startTime, Duration endTime, String subtitleText) {
         StringBuilder sb = new StringBuilder();
 

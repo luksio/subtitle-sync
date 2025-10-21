@@ -1,17 +1,25 @@
 package app.service;
 
-import app.model.SubtitleEntry;
 import app.model.FrameRate;
+import app.model.SubtitleEntry;
+import app.util.CharsetDetector;
+import lombok.extern.java.Log;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+@Log
 public class SubtitleService {
+
+    private static final Charset DEFAULT_FALLBACK_CHARSET = Charset.forName("windows-1250");
 
     public File createShiftedSubtitles(File inputFile, double offsetSeconds) throws IOException {
         List<SubtitleEntry> entries = parseSrt(inputFile);
@@ -56,7 +64,7 @@ public class SubtitleService {
 
     private List<SubtitleEntry> parseSrt(File file) throws IOException {
         List<SubtitleEntry> entries = new ArrayList<>();
-        List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        List<String> lines = readAllLines(file);
         int i = 0;
 
         while (i < lines.size()) {
@@ -82,6 +90,16 @@ public class SubtitleService {
         }
 
         return entries;
+    }
+
+    private List<String> readAllLines(File file) throws IOException {
+        Charset charset = CharsetDetector.detectCharsetWithFallback(
+                file.toPath(),
+                DEFAULT_FALLBACK_CHARSET
+        );
+
+        log.info(() -> "Wykryto kodowanie pliku '%s': %s".formatted(file.toPath(), charset.name()));
+        return Files.readAllLines(file.toPath(), charset);
     }
 
     private void writeSrt(File file, List<SubtitleEntry> entries) throws IOException {
