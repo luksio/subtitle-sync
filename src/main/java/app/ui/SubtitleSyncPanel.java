@@ -23,7 +23,7 @@ public class SubtitleSyncPanel extends JPanel {
     private final VideoMetadataService videoMetadataService;
     private File currentSubtitleFile;
 
-    // Komponenty UI
+    // UI Components
     private JLabel subtitleLabel;
     private JLabel offsetValueLabel;
     private JSlider offsetSlider;
@@ -31,7 +31,7 @@ public class SubtitleSyncPanel extends JPanel {
     private JButton saveButton;
     private JButton saveFrameRateButton;
 
-    // Nowe komponenty dla frame rate
+    // Frame rate components
     private JComboBox<FrameRate> fromFrameRateCombo;
     private JComboBox<FrameRate> toFrameRateCombo;
     private JButton detectFromVideoButton;
@@ -46,15 +46,15 @@ public class SubtitleSyncPanel extends JPanel {
     }
 
     private void initializeComponents() {
-        subtitleLabel = new JLabel("Nie wybrano pliku z napisami");
+        subtitleLabel = new JLabel("No subtitle file selected");
         offsetValueLabel = new JLabel("0.0 s");
 
-        subtitleButton = new JButton("Wybierz plik SRT");
-        saveButton = new JButton("Zapisz przesunięte napisy");
-        saveFrameRateButton = new JButton("Zapisz przekonwertowane napisy");
+        subtitleButton = new JButton("Select SRT File");
+        saveButton = new JButton("Save Shifted Subtitles");
+        saveFrameRateButton = new JButton("Save Converted Subtitles");
 
-        // Przycisk z zawijaniem tekstu w HTML
-        detectFromVideoButton = new JButton("<html><center>📹 Wykryj<br>z wideo</center></html>");
+        // Button with text wrapping in HTML
+        detectFromVideoButton = new JButton("<html><center>📹 Detect from<br>video</center></html>");
 
         offsetSlider = new JSlider(JSlider.HORIZONTAL, SLIDER_MIN, SLIDER_MAX, 0);
         offsetSlider.setMajorTickSpacing(SLIDER_MAJOR_TICK_SPACING);
@@ -62,22 +62,22 @@ public class SubtitleSyncPanel extends JPanel {
         offsetSlider.setPaintTicks(true);
         offsetSlider.setPaintLabels(true);
 
-        // Komponenty frame rate z ograniczoną szerokością
+        // Frame rate components with limited width
         fromFrameRateCombo = new JComboBox<>(FrameRate.values());
         toFrameRateCombo = new JComboBox<>(FrameRate.values());
         FrameRate defaultFrameRate = FrameRate.values()[0];
         fromFrameRateCombo.setSelectedItem(defaultFrameRate);
         toFrameRateCombo.setSelectedItem(defaultFrameRate);
 
-        // Ograniczenie szerokości OBU combo boxów
+        // Width limitation for BOTH combo boxes
         Dimension comboSize = new Dimension(300, fromFrameRateCombo.getPreferredSize().height);
         fromFrameRateCombo.setPreferredSize(comboSize);
         fromFrameRateCombo.setMaximumSize(comboSize);
         toFrameRateCombo.setPreferredSize(comboSize);
         toFrameRateCombo.setMaximumSize(comboSize);
 
-        // Przycisk z ograniczoną szerokością i wysokością
-        Dimension buttonSize = new Dimension(80, 40); // Węziej i niższy
+        // Button with limited width and height
+        Dimension buttonSize = new Dimension(80, 40); // Narrower and lower
         detectFromVideoButton.setPreferredSize(buttonSize);
         detectFromVideoButton.setMaximumSize(buttonSize);
         detectFromVideoButton.setMinimumSize(buttonSize);
@@ -90,12 +90,12 @@ public class SubtitleSyncPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Sekcja wyboru pliku na górze
+        // File selection section at the top
         add(createFileSelectionPanel(), BorderLayout.NORTH);
 
-        // Zakładki z różnymi funkcjonalnościami
-        tabbedPane.addTab("⏰ Przesunięcie czasowe", createTimeOffsetPanel());
-        tabbedPane.addTab("🎬 Konwersja klatek", createFrameRatePanel());
+        // Tabs with different functionalities
+        tabbedPane.addTab("⏰ Time Offset", createTimeOffsetPanel());
+        tabbedPane.addTab("🎬 Frame Rate Conversion", createFrameRatePanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -113,7 +113,7 @@ public class SubtitleSyncPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        panel.add(new JLabel("Przesunięcie napisów (sekundy):"));
+        panel.add(new JLabel("Subtitle offset (seconds):"));
         panel.add(Box.createVerticalStrut(10));
         panel.add(createOffsetPanel());
         panel.add(Box.createVerticalStrut(5));
@@ -130,14 +130,14 @@ public class SubtitleSyncPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Sekcja "Z" - bez przycisku
-        panel.add(new JLabel("Napisy są zsynchronizowane z:"));
+        // "From" section - without button
+        panel.add(new JLabel("Subtitles are synchronized with:"));
         panel.add(Box.createVerticalStrut(5));
         panel.add(fromFrameRateCombo);
         panel.add(Box.createVerticalStrut(15));
 
-        // Sekcja "Do" - z przyciskiem wykrywania
-        panel.add(new JLabel("Chcę przekonwertować na:"));
+        // "To" section - with detection button
+        panel.add(new JLabel("Convert to:"));
         panel.add(Box.createVerticalStrut(5));
 
         JPanel toPanel = new JPanel(new BorderLayout(5, 0));
@@ -178,7 +178,7 @@ public class SubtitleSyncPanel extends JPanel {
     }
 
     private void handleFileSelection() {
-        File selectedFile = FileChooserHelper.chooseFile(this, "Wybierz plik SRT", "srt");
+        File selectedFile = FileChooserHelper.chooseFile(this, "Select SRT File", "srt");
 
         if (selectedFile != null) {
             currentSubtitleFile = selectedFile;
@@ -188,7 +188,7 @@ public class SubtitleSyncPanel extends JPanel {
 
     private void handleVideoFrameRateDetection() {
         String[] videoExtensions = {"mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"};
-        File selectedFile = FileChooserHelper.chooseFile(this, "Wybierz plik wideo", videoExtensions);
+        File selectedFile = FileChooserHelper.chooseFile(this, "Select Video File", videoExtensions);
 
         if (selectedFile != null) {
             try {
@@ -198,13 +198,13 @@ public class SubtitleSyncPanel extends JPanel {
 
                 if (detectedFrameRate.isPresent()) {
                     toFrameRateCombo.setSelectedItem(detectedFrameRate.get());
-                    showSuccess("Wykryto frame rate: " + detectedFrameRate.get().getNameWithDescription());
+                    showSuccess("Frame rate detected: " + detectedFrameRate.get().getNameWithDescription());
                 } else {
-                    showError("Nie udało się wykryć frame rate z pliku wideo.\n" +
-                            "Możliwe przyczyny:\n" +
-                            "- Nieobsługiwany format pliku\n" +
-                            "- Uszkodzone metadane\n" +
-                            "- Brak informacji o frame rate w pliku");
+                    showError("Failed to detect frame rate from video file.\n" +
+                            "Possible reasons:\n" +
+                            "- Unsupported file format\n" +
+                            "- Corrupted metadata\n" +
+                            "- Missing frame rate information in file");
                 }
             } finally {
                 setCursor(Cursor.getDefaultCursor());
@@ -214,23 +214,23 @@ public class SubtitleSyncPanel extends JPanel {
 
     private void handleSaveAction() {
         if (currentSubtitleFile == null) {
-            showError("Nie wybrano pliku z napisami.");
+            showError("No subtitle file selected.");
             return;
         }
 
         try {
             double offsetSeconds = offsetSlider.getValue();
             File outputFile = subtitleService.createShiftedSubtitles(currentSubtitleFile, offsetSeconds);
-            showSuccess("Zapisano przesunięte napisy jako:\n" + outputFile.getName());
+            showSuccess("Shifted subtitles saved as:\n" + outputFile.getName());
         } catch (Exception ex) {
-            log.log(Level.SEVERE, "Nie udało się przetworzyć pliku podczas przesuwania napisów: " + currentSubtitleFile, ex);
-            showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
+            log.log(Level.SEVERE, "Failed to process file while shifting subtitles: " + currentSubtitleFile, ex);
+            showError("Failed to process file: " + ex.getMessage());
         }
     }
 
     private void handleFrameRateConversion() {
         if (currentSubtitleFile == null) {
-            showError("Nie wybrano pliku z napisami.");
+            showError("No subtitle file selected.");
             return;
         }
 
@@ -238,23 +238,23 @@ public class SubtitleSyncPanel extends JPanel {
         FrameRate toFrameRate = (FrameRate) toFrameRateCombo.getSelectedItem();
 
         if (fromFrameRate == toFrameRate) {
-            showError("Źródłowy i docelowy frame rate są identyczne.");
+            showError("Source and target frame rate are identical.");
             return;
         }
 
         try {
             File outputFile = subtitleService.createFrameRateConvertedSubtitles(
                     currentSubtitleFile, fromFrameRate, toFrameRate);
-            showSuccess("Zapisano przekonwertowane napisy jako:\n" + outputFile.getName());
+            showSuccess("Converted subtitles saved as:\n" + outputFile.getName());
         } catch (IllegalArgumentException ex) {
-            log.log(Level.WARNING, "Błąd parametrów przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
-            showError("Błąd parametrów: " + ex.getMessage());
+            log.log(Level.WARNING, "Parameter error during frame rate conversion for file: " + currentSubtitleFile, ex);
+            showError("Parameter error: " + ex.getMessage());
         } catch (IOException ex) {
-            log.log(Level.SEVERE, "Błąd IO przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
-            showError("Nie udało się przetworzyć pliku: " + ex.getMessage());
+            log.log(Level.SEVERE, "IO error during frame rate conversion for file: " + currentSubtitleFile, ex);
+            showError("Failed to process file: " + ex.getMessage());
         } catch (Exception ex) {
-            log.log(Level.SEVERE, "Nieoczekiwany błąd przy konwersji frame rate dla pliku: " + currentSubtitleFile, ex);
-            showError("Wystąpił nieoczekiwany błąd: " + ex.getMessage());
+            log.log(Level.SEVERE, "Unexpected error during frame rate conversion for file: " + currentSubtitleFile, ex);
+            showError("An unexpected error occurred: " + ex.getMessage());
         }
     }
 
@@ -269,10 +269,10 @@ public class SubtitleSyncPanel extends JPanel {
     }
 
     private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Błąd", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     private void showSuccess(String message) {
-        JOptionPane.showMessageDialog(this, message, "Sukces", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 }

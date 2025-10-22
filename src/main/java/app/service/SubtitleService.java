@@ -34,7 +34,7 @@ public class SubtitleService {
 
     public File createFrameRateConvertedSubtitles(File inputFile, FrameRate fromFrameRate, FrameRate toFrameRate) throws IOException {
         if (fromFrameRate == toFrameRate) {
-            throw new IllegalArgumentException("Źródłowy i docelowy frame rate są identyczne");
+            throw new IllegalArgumentException("Source and target frame rate are identical");
         }
 
         List<SubtitleEntry> entries = parseSrt(inputFile);
@@ -98,7 +98,7 @@ public class SubtitleService {
                 DEFAULT_FALLBACK_CHARSET
         );
 
-        log.info(() -> "Wykryto kodowanie pliku '%s': %s".formatted(file.toPath(), charset.name()));
+        log.info(() -> "Detected file encoding '%s': %s".formatted(file.toPath(), charset.name()));
         return Files.readAllLines(file.toPath(), charset);
     }
 

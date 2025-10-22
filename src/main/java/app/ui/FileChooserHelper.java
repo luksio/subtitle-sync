@@ -12,14 +12,14 @@ public class FileChooserHelper {
         fileChooser.setDialogTitle(title);
 
         if (extensions.length == 1) {
-            // Pojedyncze rozszerzenie
+            // Single extension
             String ext = extensions[0];
             String description = ext.toUpperCase() + " files (*." + ext + ")";
             FileNameExtensionFilter filter = new FileNameExtensionFilter(description, ext);
             fileChooser.setFileFilter(filter);
         } else if (extensions.length > 1) {
-            // Wiele rozszerzeń
-            StringBuilder description = new StringBuilder("Obsługiwane pliki (");
+            // Multiple extensions
+            StringBuilder description = new StringBuilder("Supported files (");
             for (int i = 0; i < extensions.length; i++) {
                 if (i > 0) description.append(", ");
                 description.append("*.").append(extensions[i]);

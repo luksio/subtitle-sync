@@ -7,7 +7,7 @@ import javax.swing.*;
 public class SubtitleSyncApp {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Dopasuj napisy do filmu");
+            JFrame frame = new JFrame("Subtitle Sync");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(900, 400);
             frame.setLocationRelativeTo(null);

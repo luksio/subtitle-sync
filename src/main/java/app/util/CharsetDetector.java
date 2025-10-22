@@ -31,14 +31,14 @@ public class CharsetDetector {
 
             detector.dataEnd();
         } catch (IOException e) {
-            log.severe(() -> "Błąd podczas odczytu pliku dla detekcji kodowania: %s - %s".formatted(filePath, e.getMessage()));
+            log.severe(() -> "Error reading file for encoding detection: %s - %s".formatted(filePath, e.getMessage()));
             return Option.none();
         }
 
         String detectedCharsetName = detector.getDetectedCharset();
 
         if (detectedCharsetName == null) {
-            log.warning(() -> "Nie udało się wykryć kodowania pliku: " + filePath);
+            log.warning(() -> "Failed to detect file encoding: " + filePath);
             return Option.none();
         }
 
@@ -46,14 +46,14 @@ public class CharsetDetector {
             Charset charset = Charset.forName(detectedCharsetName);
             return Option.of(charset);
         } catch (Exception e) {
-            log.severe(() -> "Wykryte kodowanie '%s' nie jest wspierane przez JVM dla pliku: %s".formatted(detectedCharsetName, filePath));
+            log.severe(() -> "Detected encoding '%s' is not supported by JVM for file: %s".formatted(detectedCharsetName, filePath));
             return Option.none();
         }
     }
 
     public static Charset detectCharsetWithFallback(Path filePath, Charset fallbackCharset) {
         return detectCharset(filePath)
-                .onEmpty(() -> log.info(() -> "Używam fallback charset '%s' dla pliku: %s".formatted(fallbackCharset.name(), filePath)))
+                .onEmpty(() -> log.info(() -> "Using fallback charset '%s' for file: %s".formatted(fallbackCharset.name(), filePath)))
                 .getOrElse(fallbackCharset);
     }
 }

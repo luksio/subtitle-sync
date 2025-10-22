@@ -21,14 +21,14 @@ public class VideoMetadataService {
 
         try {
             if (!isFFprobeAvailable()) {
-                log.warning("FFprobe nie jest dostępne w systemie");
+                log.warning("FFprobe is not available on the system");
                 return Optional.empty();
             }
 
             double fps = extractFrameRateWithFFprobe(videoFile);
             return findClosestFrameRate(fps);
         } catch (Exception e) {
-            log.log(Level.WARNING, "Nie udało się odczytać frame rate z pliku: " + videoFile.getName(), e);
+            log.log(Level.WARNING, "Failed to read frame rate from file: " + videoFile.getName(), e);
             return Optional.empty();
         }
     }
@@ -70,10 +70,10 @@ public class VideoMetadataService {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new IOException("FFprobe zakończył się błędem (kod: " + exitCode + ")");
+            throw new IOException("FFprobe ended with error (code: " + exitCode + ")");
         }
 
-        throw new IOException("Nie udało się wydobyć frame rate z metadanych");
+        throw new IOException("Failed to extract frame rate from metadata");
     }
 
     private Optional<FrameRate> findClosestFrameRate(double detectedFps) {
@@ -88,7 +88,7 @@ public class VideoMetadataService {
             }
         }
 
-        // Tylko jeśli różnica jest mniejsza niż 0.5 FPS
+        // Only if difference is less than 0.5 FPS
         if (smallestDifference < 0.5) {
             return Optional.of(closestFrameRate);
         }

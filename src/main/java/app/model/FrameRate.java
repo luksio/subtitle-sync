@@ -8,14 +8,14 @@ import java.math.RoundingMode;
 
 @AllArgsConstructor
 public enum FrameRate {
-    FPS_23_976("23.976", new BigDecimal("23.976"), "filmy kinowe"),
-    FPS_24("24", new BigDecimal("24.000"), "filmy kinowe"),
-    FPS_25("25", new BigDecimal("25.000"), "telewizja europejska"),
-    FPS_29_97("29.97", new BigDecimal("29.970"), "telewizja amerykańska"),
-    FPS_30("30", new BigDecimal("30.000"), "telewizja amerykańska"),
-    FPS_50("50", new BigDecimal("50.000"), "telewizja HD europejska"),
-    FPS_59_94("59.94", new BigDecimal("59.940"), "telewizja HD amerykańska"),
-    FPS_60("60", new BigDecimal("60.000"), "gry, sport");
+    FPS_23_976("23.976", new BigDecimal("23.976"), "film movies"),
+    FPS_24("24", new BigDecimal("24.000"), "film movies"),
+    FPS_25("25", new BigDecimal("25.000"), "European TV"),
+    FPS_29_97("29.97", new BigDecimal("29.970"), "American TV"),
+    FPS_30("30", new BigDecimal("30.000"), "American TV"),
+    FPS_50("50", new BigDecimal("50.000"), "European HD TV"),
+    FPS_59_94("59.94", new BigDecimal("59.940"), "American HD TV"),
+    FPS_60("60", new BigDecimal("60.000"), "games, sports");
 
     private final String name;
 
