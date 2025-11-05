@@ -561,7 +561,7 @@ Boundary FR
 
         then: 'IllegalArgumentException is thrown'
             def ex = thrown(IllegalArgumentException)
-            ex.message == 'Źródłowy i docelowy frame rate są identyczne'
+            ex.message == 'Source and target frame rate are identical'
     }
 
     def 'should generate correct output filename for frame rate conversion'() {

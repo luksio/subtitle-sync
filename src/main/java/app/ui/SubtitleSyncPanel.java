@@ -1,45 +1,42 @@
 package app.ui;
 
 import app.model.FrameRate;
+import app.presenter.SubtitleSyncPresenter;
 import app.service.SubtitleService;
 import app.service.VideoMetadataService;
-import lombok.extern.java.Log;
+import app.ui.view.SubtitleSyncView;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
 import java.util.Optional;
-import java.util.logging.Level;
 
-@Log
-public class SubtitleSyncPanel extends JPanel {
+public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
     private static final int SLIDER_MIN = -60;
     private static final int SLIDER_MAX = 60;
     private static final int SLIDER_MAJOR_TICK_SPACING = 20;
     private static final int SLIDER_MINOR_TICK_SPACING = 5;
 
-    private final SubtitleService subtitleService;
-    private final VideoMetadataService videoMetadataService;
+    private final SubtitleSyncPresenter presenter;
     private File currentSubtitleFile;
 
-    // UI Components
     private JLabel subtitleLabel;
     private JLabel offsetValueLabel;
     private JSlider offsetSlider;
     private JButton subtitleButton;
     private JButton saveButton;
     private JButton saveFrameRateButton;
-
-    // Frame rate components
     private JComboBox<FrameRate> fromFrameRateCombo;
     private JComboBox<FrameRate> toFrameRateCombo;
     private JButton detectFromVideoButton;
     private JTabbedPane tabbedPane;
 
     public SubtitleSyncPanel() {
-        this.subtitleService = new SubtitleService();
-        this.videoMetadataService = new VideoMetadataService();
+        this.presenter = new SubtitleSyncPresenter(
+                this,
+                new SubtitleService(),
+                new VideoMetadataService()
+        );
         initializeComponents();
         layoutComponents();
         setupEventHandlers();
@@ -170,92 +167,11 @@ public class SubtitleSyncPanel extends JPanel {
     }
 
     private void setupEventHandlers() {
-        subtitleButton.addActionListener(e -> handleFileSelection());
-        saveButton.addActionListener(e -> handleSaveAction());
-        saveFrameRateButton.addActionListener(e -> handleFrameRateConversion());
-        detectFromVideoButton.addActionListener(e -> handleVideoFrameRateDetection());
-        offsetSlider.addChangeListener(e -> updateOffsetLabel());
-    }
-
-    private void handleFileSelection() {
-        File selectedFile = FileChooserHelper.chooseFile(this, "Select SRT File", "srt");
-
-        if (selectedFile != null) {
-            currentSubtitleFile = selectedFile;
-            subtitleLabel.setText(selectedFile.getName());
-        }
-    }
-
-    private void handleVideoFrameRateDetection() {
-        String[] videoExtensions = {"mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"};
-        File selectedFile = FileChooserHelper.chooseFile(this, "Select Video File", videoExtensions);
-
-        if (selectedFile != null) {
-            try {
-                setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-                Optional<FrameRate> detectedFrameRate = videoMetadataService.detectFrameRate(selectedFile);
-
-                if (detectedFrameRate.isPresent()) {
-                    toFrameRateCombo.setSelectedItem(detectedFrameRate.get());
-                    showSuccess("Frame rate detected: " + detectedFrameRate.get().getNameWithDescription());
-                } else {
-                    showError("Failed to detect frame rate from video file.\n" +
-                            "Possible reasons:\n" +
-                            "- Unsupported file format\n" +
-                            "- Corrupted metadata\n" +
-                            "- Missing frame rate information in file");
-                }
-            } finally {
-                setCursor(Cursor.getDefaultCursor());
-            }
-        }
-    }
-
-    private void handleSaveAction() {
-        if (currentSubtitleFile == null) {
-            showError("No subtitle file selected.");
-            return;
-        }
-
-        try {
-            double offsetSeconds = offsetSlider.getValue();
-            File outputFile = subtitleService.createShiftedSubtitles(currentSubtitleFile, offsetSeconds);
-            showSuccess("Shifted subtitles saved as:\n" + outputFile.getName());
-        } catch (Exception ex) {
-            log.log(Level.SEVERE, "Failed to process file while shifting subtitles: " + currentSubtitleFile, ex);
-            showError("Failed to process file: " + ex.getMessage());
-        }
-    }
-
-    private void handleFrameRateConversion() {
-        if (currentSubtitleFile == null) {
-            showError("No subtitle file selected.");
-            return;
-        }
-
-        FrameRate fromFrameRate = (FrameRate) fromFrameRateCombo.getSelectedItem();
-        FrameRate toFrameRate = (FrameRate) toFrameRateCombo.getSelectedItem();
-
-        if (fromFrameRate == toFrameRate) {
-            showError("Source and target frame rate are identical.");
-            return;
-        }
-
-        try {
-            File outputFile = subtitleService.createFrameRateConvertedSubtitles(
-                    currentSubtitleFile, fromFrameRate, toFrameRate);
-            showSuccess("Converted subtitles saved as:\n" + outputFile.getName());
-        } catch (IllegalArgumentException ex) {
-            log.log(Level.WARNING, "Parameter error during frame rate conversion for file: " + currentSubtitleFile, ex);
-            showError("Parameter error: " + ex.getMessage());
-        } catch (IOException ex) {
-            log.log(Level.SEVERE, "IO error during frame rate conversion for file: " + currentSubtitleFile, ex);
-            showError("Failed to process file: " + ex.getMessage());
-        } catch (Exception ex) {
-            log.log(Level.SEVERE, "Unexpected error during frame rate conversion for file: " + currentSubtitleFile, ex);
-            showError("An unexpected error occurred: " + ex.getMessage());
-        }
+        subtitleButton.addActionListener(e -> presenter.onSubtitleFileSelected());
+        saveButton.addActionListener(e -> presenter.onSaveShiftedSubtitles());
+        saveFrameRateButton.addActionListener(e -> presenter.onFrameRateConversion());
+        detectFromVideoButton.addActionListener(e -> presenter.onDetectFrameRateFromVideo());
+        offsetSlider.addChangeListener(e -> presenter.onOffsetChanged());
     }
 
     private void adjustOffset(int delta) {
@@ -264,15 +180,78 @@ public class SubtitleSyncPanel extends JPanel {
         offsetSlider.setValue(newValue);
     }
 
-    private void updateOffsetLabel() {
-        offsetValueLabel.setText(offsetSlider.getValue() + ".0 s");
+    @Override
+    public void setSubtitleFileName(String fileName) {
+        subtitleLabel.setText(fileName);
     }
 
-    private void showError(String message) {
+    @Override
+    public void setOffsetValue(String offsetText) {
+        offsetValueLabel.setText(offsetText);
+    }
+
+    @Override
+    public void setFromFrameRate(FrameRate frameRate) {
+        fromFrameRateCombo.setSelectedItem(frameRate);
+    }
+
+    @Override
+    public void setToFrameRate(FrameRate frameRate) {
+        toFrameRateCombo.setSelectedItem(frameRate);
+    }
+
+    @Override
+    public File getCurrentSubtitleFile() {
+        return currentSubtitleFile;
+    }
+
+    @Override
+    public double getOffsetSeconds() {
+        return offsetSlider.getValue();
+    }
+
+    @Override
+    public FrameRate getFromFrameRate() {
+        return (FrameRate) fromFrameRateCombo.getSelectedItem();
+    }
+
+    @Override
+    public FrameRate getToFrameRate() {
+        return (FrameRate) toFrameRateCombo.getSelectedItem();
+    }
+
+    @Override
+    public void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    private void showSuccess(String message) {
+    @Override
+    public void showSuccess(String message) {
         JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    @Override
+    public void setBusy(boolean busy) {
+        setCursor(busy ?
+                Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR) :
+                Cursor.getDefaultCursor()
+        );
+    }
+
+    @Override
+    public Optional<File> chooseSubtitleFile() {
+        File file = FileChooserHelper.chooseFile(this, "Select SRT File", "srt");
+        if (file != null) {
+            currentSubtitleFile = file;
+        }
+        return Optional.ofNullable(file);
+    }
+
+    @Override
+    public Optional<File> chooseVideoFile() {
+        String[] videoExtensions = {"mp4", "avi", "mkv", "mov", "wmv", "flv", "m4v"};
+        return Optional.ofNullable(
+                FileChooserHelper.chooseFile(this, "Select Video File", videoExtensions)
+        );
     }
 }
