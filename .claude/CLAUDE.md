@@ -45,6 +45,19 @@ app/
 4. **Enum with Behavior** - `FrameRate` encapsulates FPS values and conversion logic
 5. **Utility Class Pattern** - stateless utilities use Lombok `@UtilityClass`
 
+### Swing Architecture (MVP Pattern)
+
+**Core Rules:**
+1. **Services have ZERO Swing dependencies** - no `javax.swing.*` or `java.awt.*` imports
+2. **Presenters orchestrate** - handle all UI logic, event handling, service coordination
+3. **Views are interfaces** - Swing panels implement view interfaces (testing with mocks)
+4. **Events go through presenters** - `ActionListener`/`DocumentListener` delegate to presenter
+5. **Constructor injection** - services → presenters → views
+
+**Reference:** `SubtitleSyncPresenter` + `SubtitleSyncView` + `SubtitleSyncPanel`
+
+**Testing:** Presenters use mock views (no Swing dependencies)
+
 ### Time Precision
 
 - `java.time.Duration` for subtitle timing (nanosecond precision internally)
