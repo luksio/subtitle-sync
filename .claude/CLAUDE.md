@@ -22,9 +22,13 @@ This file provides guidance to Claude Code when working with this repository.
 ```
 app/
 ├── SubtitleSyncApp              # Main entry point (JFrame)
+├── presenter/                   # MVP Presenters
+│   └── SubtitleSyncPresenter    # Orchestrates UI logic, event handling
 ├── ui/                          # Swing GUI
-│   ├── SubtitleSyncPanel        # Main tabbed interface
-│   └── FileChooserHelper        # File selection dialogs
+│   ├── SubtitleSyncPanel        # Main tabbed interface (View implementation)
+│   ├── FileChooserHelper        # File selection dialogs
+│   └── view/
+│       └── SubtitleSyncView     # View interface (no Swing types)
 ├── service/                     # Business logic
 │   ├── SubtitleService          # SRT parsing, shifting, conversion
 │   └── VideoMetadataService     # FFprobe integration
@@ -67,7 +71,7 @@ app/
 ## Technology Stack
 
 - **Java 24** - records, pattern matching, modern features
-- **Lombok 1.18.38** - `@Log`, `@UtilityClass`, `@Getter`, `@AllArgsConstructor`
+- **Lombok 1.18.38** - `@Log`, `@UtilityClass`, `@Getter`, `@AllArgsConstructor`, `@RequiredArgsConstructor`
 - **Vavr 0.10.6** - functional programming (`Option`, `Either`, `Try`)
 - **Apache Commons Lang3 3.18** - `StringUtils`
 - **juniversalchardet 2.5.0** - automatic charset detection (Mozilla's UniversalChardet)
@@ -109,7 +113,7 @@ app/
 
 ### Locale
 
-- UI strings are in Polish (hardcoded, no i18n)
+- UI strings are in English
 
 ## Testing
 
