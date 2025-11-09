@@ -241,4 +241,25 @@ Please, stop. Please.''')
             result.size() == 1
             result[0].text() == 'ID, please.'
     }
+
+    @PendingFeature
+    def 'should remove entries containing URLs'() {
+        given: 'subtitle entry containing URL'
+            def entries = TestFileUtils.parseTestSrt(tempDir, """1
+00:00:01,000 --> 00:00:03,000
+${spamText}""")
+
+        when: 'removing spam content'
+            def result = SubtitleCleanerService.removeSpam(entries)
+
+        then: 'entry is completely removed'
+            result.isEmpty()
+
+        where:
+            spamText << [
+                    'Downloaded from www.opensubtitles.org',
+                    'Subtitles by http://addic7ed.com',
+                    'https://subscene.com - best subtitles'
+            ]
+    }
 }
