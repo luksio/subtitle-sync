@@ -2,12 +2,12 @@ package app.service
 
 import app.TestResourceUtils
 import app.model.FrameRate
+import app.util.TestFileUtils
 import spock.lang.Specification
 import spock.lang.TempDir
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
 import java.nio.file.Path
 
 class SubtitleServiceSpec extends Specification {
@@ -62,7 +62,7 @@ Last subtitle after hour
 '''
 
         when: 'shifting subtitles by the specified offset'
-            def inputFile = createTempSrtFile('test.srt', inputContent)
+            def inputFile = TestFileUtils.TestFileUtils.createTempSrtFile(tempDir,tempDir, 'test.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'output file is created with correct name'
@@ -106,7 +106,7 @@ Early subtitle that would go negative
 '''
 
         when: 'shifting subtitles by negative offset'
-            def inputFile = createTempSrtFile('late.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'late.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'times are correctly adjusted with hour boundary crossing and negative values clamped to zero'
@@ -128,7 +128,7 @@ Boundary test
 '''
 
         when:
-            def inputFile = createTempSrtFile('large_offset.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'large_offset.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -171,7 +171,7 @@ UPPERCASE TEXT
 '''
 
         when: 'shifting subtitles'
-            def inputFile = createTempSrtFile('formatted.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'formatted.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'formatting and numbering are preserved'
@@ -193,7 +193,7 @@ Subtitle with BOM
 '''
 
         when: 'processing file with BOM'
-            def inputFile = createTempSrtFile('with_bom.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'with_bom.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'BOM is removed and content is correct'
@@ -218,7 +218,7 @@ Subtitle with BOM
             def offsetSeconds = 1.0
 
         when:
-            def inputFile = createTempSrtFile('empty.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'empty.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -234,7 +234,7 @@ Subtitle with BOM
             def offsetSeconds = 0.0
 
         when: 'creating shifted subtitles'
-            def inputFile = createTempSrtFile(inputFileName, inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,inputFileName, inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'output filename is correct'
@@ -265,7 +265,7 @@ Test subtitle
 '''
 
         when: 'applying zero offset'
-            def inputFile = createTempSrtFile('zero_test.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'zero_test.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'output is identical to input'
@@ -286,7 +286,7 @@ Edge millis
 '''
 
         when:
-            def inputFile = createTempSrtFile('millis.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'millis.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -305,7 +305,7 @@ No trailing blank
             def offsetSeconds = 1.0
 
         when:
-            def inputFile = createTempSrtFile('no_trailing_blank.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'no_trailing_blank.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -326,7 +326,7 @@ Weird spacing
             def offsetSeconds = 1.0
 
         when:
-            def inputFile = createTempSrtFile('spaces.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'spaces.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -359,7 +359,7 @@ OK
 '''
 
         when:
-            def inputFile = createTempSrtFile('numeric_text.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'numeric_text.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then:
@@ -403,7 +403,7 @@ Third subtitle at 10+ minutes
 '''
 
         when: 'converting frame rate'
-            def inputFile = createTempSrtFile('test.srt', inputContent)
+            def inputFile = TestFileUtils.TestFileUtils.createTempSrtFile(tempDir,tempDir, 'test.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'output file is created with correct name'
@@ -448,7 +448,7 @@ Third subtitle with fractional seconds
 '''
 
         when: 'converting frame rate'
-            def inputFile = createTempSrtFile('fast.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'fast.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'timing is correctly shortened'
@@ -490,7 +490,7 @@ End credits subtitle
 '''
 
         when: 'converting frame rate for long content'
-            def inputFile = createTempSrtFile('long_movie.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'long_movie.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'timing is correctly converted for long duration'
@@ -516,7 +516,7 @@ One second subtitle
 '''
 
         when: 'converting with extreme ratio'
-            def inputFile = createTempSrtFile('extreme.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'extreme.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'timing is correctly adjusted'
@@ -540,7 +540,7 @@ Boundary FR
 '''
 
         when:
-            def inputFile = createTempSrtFile('fr_boundary.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'fr_boundary.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then:
@@ -551,7 +551,7 @@ Boundary FR
     def 'should throw IllegalArgumentException when frame rates are identical'() {
         given: 'input SRT file'
             def inputContent = '1\n00:00:01,000 --> 00:00:03,000\nTest\n'
-            def inputFile = createTempSrtFile('same.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'same.srt', inputContent)
 
         and: 'identical source and target frame rates'
             def frameRate = FrameRate.FPS_25
@@ -569,7 +569,7 @@ Boundary FR
             def inputContent = '1\n00:00:01,000 --> 00:00:03,000\nTest\n'
 
         when: 'converting frame rate'
-            def inputFile = createTempSrtFile(inputFileName, inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,inputFileName, inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFps, toFps)
 
         then: 'output filename is correct'
@@ -594,7 +594,7 @@ Quick flash
             def toFrameRate = FrameRate.FPS_24
 
         when: 'converting frame rate'
-            def inputFile = createTempSrtFile('quick.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'quick.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'file is created successfully'
@@ -621,7 +621,7 @@ UPPERCASE TEXT
             def toFrameRate = FrameRate.FPS_24
 
         when: 'converting frame rate'
-            def inputFile = createTempSrtFile('formatted.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir,'formatted.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'text formatting is preserved'
@@ -633,18 +633,6 @@ UPPERCASE TEXT
         and: 'timing is adjusted but text remains intact'
             content.contains('00:01:02,500 --> 00:01:04,583')
             content.contains('00:02:05,000 --> 00:02:08,125')
-    }
-
-    private File createTempSrtFile(String fileName, String content) {
-        def file = tempDir.resolve(fileName).toFile()
-        file.text = content
-        return file
-    }
-
-    private File createTempSrtFileWithEncoding(String fileName, String content, Charset charset) {
-        def file = tempDir.resolve(fileName).toFile()
-        Files.write(file.toPath(), content.getBytes(charset))
-        return file
     }
 
 
@@ -665,7 +653,7 @@ Second subtitle text
             def offsetSeconds = 1.0
 
         when: 'creating file with specific encoding and processing it'
-            def inputFile = createTempSrtFileWithEncoding("test_${encodingName}.srt", inputContent, encoding)
+            def inputFile = TestFileUtils.createTempSrtFileWithEncoding(tempDir,"test_${encodingName}.srt", inputContent, encoding)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'file is successfully processed'
