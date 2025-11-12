@@ -41,6 +41,10 @@ public record SubtitleEntry(int index, Duration start, Duration end, String text
         }
     }
 
+    public SubtitleEntry withText(String text) {
+        return new SubtitleEntry(index, start, end, text);
+    }
+
     public static SubtitleEntry parse(int index, String timeLine, String text) {
         if (StringUtils.isBlank(timeLine)) {
             throw InvalidSubtitleException.emptyTimeline(index, text);
