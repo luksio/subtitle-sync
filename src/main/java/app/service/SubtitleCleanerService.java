@@ -4,33 +4,24 @@ import app.model.SubtitleEntry;
 import lombok.experimental.UtilityClass;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
-/**
- * Service for cleaning subtitle entries by removing spam content and
- * SDH (Subtitles for Deaf and Hard of hearing) annotations.
- */
 @UtilityClass
 public class SubtitleCleanerService {
 
-    /**
-     * Removes spam content from subtitle entries (e.g., URLs, rip information).
-     *
-     * @param entries the list of subtitle entries to clean
-     * @return a new list with spam content removed
-     */
+    private static final Pattern URL_PATTERN = Pattern.compile("(?:https?://|www\\.)\\S+");
+
     public List<SubtitleEntry> removeSpam(List<SubtitleEntry> entries) {
-        // TODO: implement spam removal (URLs, etc.)
-        return entries;
+        return entries.stream()
+                .filter(entry -> !containsUrl(entry.text()))
+                .toList();
     }
 
-    /**
-     * Removes SDH (Subtitles for Deaf and Hard of hearing) annotations from subtitle entries.
-     * This includes sound descriptions in parentheses, brackets, speaker names, etc.
-     *
-     * @param entries the list of subtitle entries to clean
-     * @return a new list with SDH content removed; entries that contain only SDH content are removed entirely
-     */
-    public List<SubtitleEntry> removeSDH(List<SubtitleEntry> entries) {
+    private boolean containsUrl(String text) {
+        return URL_PATTERN.matcher(text).find();
+    }
+
+    public List<SubtitleEntry> removeSdh(List<SubtitleEntry> entries) {
         // TODO: implement SDH removal
         return entries;
     }

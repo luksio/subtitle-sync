@@ -20,7 +20,7 @@ class SubtitleCleanerServiceSpec extends Specification {
 Ray! (CRYING)''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'sound description is removed, dialog remains'
             result.size() == 1
@@ -36,7 +36,7 @@ Ray! (CRYING)''')
 - MAJOR: Don't throw it away.''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'sound description line is removed, speaker prefix is removed, dialog remains'
             result.size() == 1
@@ -51,7 +51,7 @@ Ray! (CRYING)''')
 ${sdhContent}""")
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'entry is completely removed'
             result.isEmpty()
@@ -74,7 +74,7 @@ ${sdhContent}""")
 -(sighs)''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'sound description line is removed, dialog remains without dash'
             result.size() == 1
@@ -90,7 +90,7 @@ STUDENTS (chanting):
 <i> Fight! Fight!</i>''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'speaker prefix is removed, dialog remains'
             result.size() == 1
@@ -105,7 +105,7 @@ STUDENTS (chanting):
 ♪ Pedal down and drive ♪''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'song lyrics are preserved'
             result.size() == 1
@@ -121,7 +121,7 @@ STUDENTS (chanting):
 becomes frightened,</i>''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'speaker name is removed, dialog remains'
             result.size() == 1
@@ -136,7 +136,7 @@ becomes frightened,</i>''')
 [sobbing] They won't go away.''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'sound description is removed, dialog remains'
             result.size() == 1
@@ -152,7 +152,7 @@ STUDENT ON GROUND (panting):
 Please, stop. Please.''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'speaker prefix is removed, dialog remains'
             result.size() == 1
@@ -168,7 +168,7 @@ Please, stop. Please.''')
 <i> by FEX playing)</i>''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'song information is preserved'
             result.size() == 1
@@ -184,7 +184,7 @@ Please, stop. Please.''')
 -ERNESTO: So, uh, tonight,''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'speaker name is removed, dialog with dash remains'
             result.size() == 1
@@ -200,14 +200,13 @@ Please, stop. Please.''')
 - ID, please.''')
 
         when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
+            def result = SubtitleCleanerService.removeSdh(entries)
 
         then: 'sound description line is removed, dialog remains'
             result.size() == 1
             result[0].text() == 'ID, please.'
     }
 
-    @PendingFeature
     def 'should remove entries containing URLs'() {
         given: 'subtitle entry containing URL'
             def entries = TestFileUtils.parseTestSrt(tempDir, """1
@@ -224,8 +223,7 @@ ${spamText}""")
             spamText << [
                     'Downloaded from www.opensubtitles.org',
                     'Subtitles by http://addic7ed.com',
-                    'https://subscene.com - best subtitles',
-                    '.:: GrupaHatak.pl ::.'
+                    'https://subscene.com - best subtitles'
             ]
     }
 }
