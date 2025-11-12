@@ -44,46 +44,25 @@ Ray! (CRYING)''')
     }
 
     @PendingFeature
-    def 'should remove entire entry when it contains only sound descriptions'() {
-        given: 'subtitle with only sound description'
-            def entries = TestFileUtils.parseTestSrt(tempDir, '''2195
-01:37:44,080 --> 01:37:46,457
-(CROWD CHEERING)''')
+    def 'should remove entries containing only SDH content: #description'() {
+        given: 'subtitle with only SDH content'
+            def entries = TestFileUtils.parseTestSrt(tempDir, """1
+00:00:01,000 --> 00:00:03,000
+${sdhContent}""")
 
         when: 'removing SDH content'
             def result = SubtitleCleanerService.removeSDH(entries)
 
         then: 'entry is completely removed'
             result.isEmpty()
-    }
 
-    @PendingFeature
-    def 'should remove entry with multiple sound description lines'() {
-        given: 'subtitle with two lines of sound descriptions'
-            def entries = TestFileUtils.parseTestSrt(tempDir, '''1458
-01:42:19,672 --> 01:42:22,772
--(Gwen grunting)
--(pained squealing)''')
-
-        when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
-
-        then: 'entry is completely removed'
-            result.isEmpty()
-    }
-
-    @PendingFeature
-    def 'should remove entry with only music symbols'() {
-        given: 'subtitle with only music symbols'
-            def entries = TestFileUtils.parseTestSrt(tempDir, '''1461
-01:42:53,403 --> 01:42:55,607
-♪ ♪''')
-
-        when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
-
-        then: 'entry is completely removed'
-            result.isEmpty()
+        where:
+            description                      | sdhContent
+            'sound description in parens'    | '(CROWD CHEERING)'
+            'multiple sound description'     | '-(Gwen grunting)\n-(pained squealing)'
+            'only music symbols'             | '♪ ♪'
+            'italicized sound description'   | '<i> (static crackling softly)</i>'
+            'sound description in brackets'  | '[ Crowd yelling ]'
     }
 
     @PendingFeature
@@ -100,20 +79,6 @@ Ray! (CRYING)''')
         then: 'sound description line is removed, dialog remains without dash'
             result.size() == 1
             result[0].text() == 'No.'
-    }
-
-    @PendingFeature
-    def 'should remove entry with italicized sound description'() {
-        given: 'subtitle with sound description in italics tags'
-            def entries = TestFileUtils.parseTestSrt(tempDir, '''1
-00:00:03,837 --> 00:00:06,114
-<i> (static crackling softly)</i>''')
-
-        when: 'removing SDH content'
-            def result = SubtitleCleanerService.removeSDH(entries)
-
-        then: 'entry is completely removed'
-            result.isEmpty()
     }
 
     @PendingFeature
@@ -259,7 +224,8 @@ ${spamText}""")
             spamText << [
                     'Downloaded from www.opensubtitles.org',
                     'Subtitles by http://addic7ed.com',
-                    'https://subscene.com - best subtitles'
+                    'https://subscene.com - best subtitles',
+                    '.:: GrupaHatak.pl ::.'
             ]
     }
 }
