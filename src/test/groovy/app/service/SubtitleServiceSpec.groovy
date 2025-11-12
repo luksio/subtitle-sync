@@ -62,7 +62,7 @@ Last subtitle after hour
 '''
 
         when: 'shifting subtitles by the specified offset'
-            def inputFile = TestFileUtils.TestFileUtils.createTempSrtFile(tempDir,tempDir, 'test.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'test.srt', inputContent)
             def outputFile = subtitleService.createShiftedSubtitles(inputFile, offsetSeconds)
 
         then: 'output file is created with correct name'
@@ -403,7 +403,7 @@ Third subtitle at 10+ minutes
 '''
 
         when: 'converting frame rate'
-            def inputFile = TestFileUtils.TestFileUtils.createTempSrtFile(tempDir,tempDir, 'test.srt', inputContent)
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'test.srt', inputContent)
             def outputFile = subtitleService.createFrameRateConvertedSubtitles(inputFile, fromFrameRate, toFrameRate)
 
         then: 'output file is created with correct name'

@@ -1,7 +1,6 @@
 package app.service
 
 import app.util.TestFileUtils
-import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -12,7 +11,6 @@ class SubtitleCleanerServiceSpec extends Specification {
     @TempDir
     Path tempDir
 
-    @PendingFeature
     def 'should remove sound descriptions in parentheses from line'() {
         given: 'subtitle with sound description in parentheses at the end'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''2197
@@ -27,7 +25,6 @@ Ray! (CRYING)''')
             result[0].text() == 'Ray!'
     }
 
-    @PendingFeature
     def 'should remove sound descriptions in parentheses from multi-line subtitle'() {
         given: 'subtitle with sound description on first line and dialog on second'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''2248
@@ -43,7 +40,6 @@ Ray! (CRYING)''')
             result[0].text() == 'Don\'t throw it away.'
     }
 
-    @PendingFeature
     def 'should remove entries containing only SDH content: #description'() {
         given: 'subtitle with only SDH content'
             def entries = TestFileUtils.parseTestSrt(tempDir, """1
@@ -65,7 +61,6 @@ ${sdhContent}""")
             'sound description in brackets'  | '[ Crowd yelling ]'
     }
 
-    @PendingFeature
     def 'should remove sound description line but keep dialog line'() {
         given: 'subtitle with dialog and sound description on separate lines'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''1332
@@ -81,7 +76,6 @@ ${sdhContent}""")
             result[0].text() == 'No.'
     }
 
-    @PendingFeature
     def 'should remove speaker name prefix but keep dialog'() {
         given: 'subtitle with speaker name and action description'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''27
@@ -97,7 +91,6 @@ STUDENTS (chanting):
             result[0].text() == '<i> Fight! Fight!</i>'
     }
 
-    @PendingFeature
     def 'should keep song lyrics with music symbols'() {
         given: 'subtitle with song lyrics and music symbols'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''2187
@@ -112,7 +105,6 @@ STUDENTS (chanting):
             result[0].text() == '♪ Pedal down and drive ♪'
     }
 
-    @PendingFeature
     def 'should remove speaker name in square brackets'() {
         given: 'subtitle with speaker name in square brackets'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''204
@@ -128,7 +120,6 @@ becomes frightened,</i>''')
             result[0].text() == '<i>When a person\nbecomes frightened,</i>'
     }
 
-    @PendingFeature
     def 'should remove sound description in square brackets'() {
         given: 'subtitle with sound description in square brackets'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''89
@@ -143,7 +134,6 @@ becomes frightened,</i>''')
             result[0].text() == 'They won\'t go away.'
     }
 
-    @PendingFeature
     def 'should remove speaker name with action description'() {
         given: 'subtitle with speaker name and action description'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''38
@@ -159,7 +149,6 @@ Please, stop. Please.''')
             result[0].text() == 'Please, stop. Please.'
     }
 
-    @PendingFeature
     def 'should keep song title information'() {
         given: 'subtitle with song title and artist in italics'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''93
@@ -175,7 +164,6 @@ Please, stop. Please.''')
             result[0].text() == '<i> ("Subways of Your Mind"</i>\n<i> by FEX playing)</i>'
     }
 
-    @PendingFeature
     def 'should remove speaker name but keep dialog with dash'() {
         given: 'subtitle with dialog and speaker name'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''67
@@ -191,7 +179,6 @@ Please, stop. Please.''')
             result[0].text() == '-Hi, Ernie.\n-So, uh, tonight,'
     }
 
-    @PendingFeature
     def 'should remove sound description line from multi-line dialog'() {
         given: 'subtitle with sound description and dialog on separate lines'
             def entries = TestFileUtils.parseTestSrt(tempDir, '''32
