@@ -26,6 +26,9 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
     private JButton subtitleButton;
     private JButton saveButton;
     private JButton saveFrameRateButton;
+    private JButton saveCleanedButton;
+    private JCheckBox removeSdhCheckBox;
+    private JCheckBox removeSpamCheckBox;
     private JComboBox<FrameRate> fromFrameRateCombo;
     private JComboBox<FrameRate> toFrameRateCombo;
     private JButton detectFromVideoButton;
@@ -49,6 +52,10 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
         subtitleButton = new JButton("Select SRT File");
         saveButton = new JButton("Save Shifted Subtitles");
         saveFrameRateButton = new JButton("Save Converted Subtitles");
+        saveCleanedButton = new JButton("Save Cleaned Subtitles");
+
+        removeSdhCheckBox = new JCheckBox("Remove SDH (sound descriptions, speaker labels)", true);
+        removeSpamCheckBox = new JCheckBox("Remove spam (URLs to subtitle sites)", true);
 
         // Button with text wrapping in HTML
         detectFromVideoButton = new JButton("<html><center>📹 Detect from<br>video</center></html>");
@@ -93,6 +100,7 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
         // Tabs with different functionalities
         tabbedPane.addTab("⏰ Time Offset", createTimeOffsetPanel());
         tabbedPane.addTab("🎬 Frame Rate Conversion", createFrameRatePanel());
+        tabbedPane.addTab("🧹 Clean Subtitles", createCleanPanel());
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -150,6 +158,23 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
         return panel;
     }
 
+    private JPanel createCleanPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        panel.add(new JLabel("Cleaning options:"));
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(removeSdhCheckBox);
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(removeSpamCheckBox);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(saveCleanedButton);
+        panel.add(Box.createVerticalGlue());
+
+        return panel;
+    }
+
     private JPanel createOffsetPanel() {
         JPanel panel = new JPanel(new BorderLayout());
 
@@ -172,6 +197,13 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
         saveFrameRateButton.addActionListener(e -> presenter.onFrameRateConversion());
         detectFromVideoButton.addActionListener(e -> presenter.onDetectFrameRateFromVideo());
         offsetSlider.addChangeListener(e -> presenter.onOffsetChanged());
+        saveCleanedButton.addActionListener(e -> presenter.onSaveCleanedSubtitles());
+        removeSdhCheckBox.addItemListener(e -> updateSaveCleanedEnabled());
+        removeSpamCheckBox.addItemListener(e -> updateSaveCleanedEnabled());
+    }
+
+    private void updateSaveCleanedEnabled() {
+        saveCleanedButton.setEnabled(removeSdhCheckBox.isSelected() || removeSpamCheckBox.isSelected());
     }
 
     private void adjustOffset(int delta) {
@@ -218,6 +250,16 @@ public class SubtitleSyncPanel extends JPanel implements SubtitleSyncView {
     @Override
     public FrameRate getToFrameRate() {
         return (FrameRate) toFrameRateCombo.getSelectedItem();
+    }
+
+    @Override
+    public boolean isRemoveSdhSelected() {
+        return removeSdhCheckBox.isSelected();
+    }
+
+    @Override
+    public boolean isRemoveSpamSelected() {
+        return removeSpamCheckBox.isSelected();
     }
 
     @Override

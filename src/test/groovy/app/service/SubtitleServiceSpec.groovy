@@ -749,4 +749,49 @@ dostępne jednostki.
             outputFile.exists()
             expectedOutputs.each { outputFile.text.contains(it) }
     }
+
+    def 'should clean both SDH and spam, returning counts and writing a _cleaned file'() {
+        given: 'SRT mixing dialog, SDH-only entries, modified entries and a spam URL'
+            def inputContent = '''1
+00:00:01,000 --> 00:00:03,000
+[thunder rumbling]
+
+2
+00:00:04,000 --> 00:00:06,000
+[in Spanish] Buenos días
+
+3
+00:00:07,000 --> 00:00:09,000
+Plain dialog line.
+
+4
+00:00:10,000 --> 00:00:12,000
+Downloaded from www.opensubtitles.org
+
+5
+00:00:13,000 --> 00:00:15,000
+(PHONE RINGING)
+'''
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'movie.srt', inputContent)
+
+        when: 'cleaning with both options enabled'
+            def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
+
+        then: 'output file uses the combined suffix'
+            result.outputFile().exists()
+            result.outputFile().name == 'movie_cleaned.srt'
+
+        and: 'pure SDH entries (1 and 5) and the URL entry (4) are dropped, leaving only the dialog rows with their original indices'
+            result.sdhRemoved() == 2
+            result.spamRemoved() == 1
+            result.outputFile().text == '''2
+00:00:04,000 --> 00:00:06,000
+Buenos días
+
+3
+00:00:07,000 --> 00:00:09,000
+Plain dialog line.
+
+'''
+    }
 }

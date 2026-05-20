@@ -24,6 +24,30 @@ public class SubtitleService {
         return outputFile;
     }
 
+    public CleanResult createCleanedSubtitles(File inputFile, boolean removeSdh, boolean removeSpam) throws IOException {
+        if (!removeSdh && !removeSpam) {
+            throw new IllegalArgumentException("At least one cleaning option must be selected");
+        }
+
+        List<SubtitleEntry> entries = SubtitleParserService.parseFile(inputFile);
+        int beforeSdh = entries.size();
+        List<SubtitleEntry> afterSdh = removeSdh ? SubtitleCleanerService.removeSdh(entries) : entries;
+        int sdhRemoved = beforeSdh - afterSdh.size();
+
+        List<SubtitleEntry> afterSpam = removeSpam ? SubtitleCleanerService.removeSpam(afterSdh) : afterSdh;
+        int spamRemoved = afterSdh.size() - afterSpam.size();
+
+        File outputFile = generateOutputFile(inputFile, suffixFor(removeSdh, removeSpam));
+        writeSrt(outputFile, afterSpam);
+        return new CleanResult(outputFile, sdhRemoved, spamRemoved);
+    }
+
+    private String suffixFor(boolean removeSdh, boolean removeSpam) {
+        if (removeSdh && removeSpam) return "_cleaned";
+        if (removeSdh) return "_no_sdh";
+        return "_no_spam";
+    }
+
     public File createFrameRateConvertedSubtitles(File inputFile, FrameRate fromFrameRate, FrameRate toFrameRate) throws IOException {
         if (fromFrameRate == toFrameRate) {
             throw new IllegalArgumentException("Source and target frame rate are identical");

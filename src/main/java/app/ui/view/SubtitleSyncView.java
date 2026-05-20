@@ -69,6 +69,16 @@ public interface SubtitleSyncView {
     FrameRate getToFrameRate();
 
     /**
+     * Whether the user has opted in to SDH removal.
+     */
+    boolean isRemoveSdhSelected();
+
+    /**
+     * Whether the user has opted in to spam (URL) removal.
+     */
+    boolean isRemoveSpamSelected();
+
+    /**
      * Display error message to user.
      *
      * @param message error message

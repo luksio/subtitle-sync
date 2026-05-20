@@ -1,6 +1,7 @@
 package app.presenter;
 
 import app.model.FrameRate;
+import app.service.CleanResult;
 import app.service.SubtitleService;
 import app.service.VideoMetadataService;
 import app.ui.view.SubtitleSyncView;
@@ -99,5 +100,40 @@ public class SubtitleSyncPresenter {
 
     public void onOffsetChanged() {
         view.setOffsetValue(String.format("%.1f s", view.getOffsetSeconds()));
+    }
+
+    public void onSaveCleanedSubtitles() {
+        File subtitleFile = view.getCurrentSubtitleFile();
+        if (subtitleFile == null) {
+            view.showError("No subtitle file selected.");
+            return;
+        }
+
+        boolean removeSdh = view.isRemoveSdhSelected();
+        boolean removeSpam = view.isRemoveSpamSelected();
+        if (!removeSdh && !removeSpam) {
+            view.showError("Select at least one cleaning option.");
+            return;
+        }
+
+        try {
+            CleanResult result = subtitleService.createCleanedSubtitles(subtitleFile, removeSdh, removeSpam);
+            view.showSuccess(buildCleaningSummary(result, removeSdh, removeSpam));
+        } catch (Exception ex) {
+            log.log(Level.SEVERE, "Failed to clean subtitles for file: " + subtitleFile, ex);
+            view.showError("Failed to process file: " + ex.getMessage());
+        }
+    }
+
+    private String buildCleaningSummary(CleanResult result, boolean removeSdh, boolean removeSpam) {
+        StringBuilder sb = new StringBuilder("Cleaned subtitles saved as:\n")
+                .append(result.outputFile().getName());
+        if (removeSdh) {
+            sb.append("\nRemoved ").append(result.sdhRemoved()).append(" SDH entries");
+        }
+        if (removeSpam) {
+            sb.append("\nRemoved ").append(result.spamRemoved()).append(" spam entries");
+        }
+        return sb.toString();
     }
 }

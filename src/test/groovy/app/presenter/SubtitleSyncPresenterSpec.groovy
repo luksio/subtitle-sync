@@ -1,6 +1,7 @@
 package app.presenter
 
 import app.model.FrameRate
+import app.service.CleanResult
 import app.service.SubtitleService
 import app.service.VideoMetadataService
 import app.ui.view.SubtitleSyncView
@@ -260,5 +261,68 @@ class SubtitleSyncPresenterSpec extends Specification {
 
         then: 'offset label is updated with negative value'
             1 * view.setOffsetValue("-10.0 s")
+    }
+
+    def 'should show error when saving cleaned subtitles without file selected'() {
+        given: 'no subtitle file is selected'
+            view.getCurrentSubtitleFile() >> null
+
+        when: 'user attempts to save cleaned subtitles'
+            presenter.onSaveCleanedSubtitles()
+
+        then: 'error message is shown and service is not called'
+            1 * view.showError("No subtitle file selected.")
+            0 * subtitleService.createCleanedSubtitles(_, _, _)
+    }
+
+    def 'should show error when no cleaning option is selected'() {
+        given: 'file is selected but both cleaning options are off'
+            def inputFile = Files.createFile(tempDir.resolve("input.srt")).toFile()
+            view.getCurrentSubtitleFile() >> inputFile
+            view.isRemoveSdhSelected() >> false
+            view.isRemoveSpamSelected() >> false
+
+        when: 'user attempts to save cleaned subtitles'
+            presenter.onSaveCleanedSubtitles()
+
+        then: 'error message is shown and service is not called'
+            1 * view.showError("Select at least one cleaning option.")
+            0 * subtitleService.createCleanedSubtitles(_, _, _)
+    }
+
+    def 'should save cleaned subtitles and show summary with both counts'() {
+        given: 'file is selected with both cleaning options enabled'
+            def inputFile = Files.createFile(tempDir.resolve("input.srt")).toFile()
+            def outputFile = tempDir.resolve("input_cleaned.srt").toFile()
+            view.getCurrentSubtitleFile() >> inputFile
+            view.isRemoveSdhSelected() >> true
+            view.isRemoveSpamSelected() >> true
+
+        and: 'service returns a result with removal counts'
+            subtitleService.createCleanedSubtitles(inputFile, true, true) >> new CleanResult(outputFile, 12, 2)
+
+        when: 'user saves cleaned subtitles'
+            presenter.onSaveCleanedSubtitles()
+
+        then: 'success message lists both counts'
+            1 * view.showSuccess("Cleaned subtitles saved as:\ninput_cleaned.srt\nRemoved 12 SDH entries\nRemoved 2 spam entries")
+    }
+
+    def 'should save cleaned subtitles with only SDH count when spam is disabled'() {
+        given: 'file is selected with only SDH removal enabled'
+            def inputFile = Files.createFile(tempDir.resolve("input.srt")).toFile()
+            def outputFile = tempDir.resolve("input_no_sdh.srt").toFile()
+            view.getCurrentSubtitleFile() >> inputFile
+            view.isRemoveSdhSelected() >> true
+            view.isRemoveSpamSelected() >> false
+
+        and: 'service returns a result'
+            subtitleService.createCleanedSubtitles(inputFile, true, false) >> new CleanResult(outputFile, 5, 0)
+
+        when: 'user saves cleaned subtitles'
+            presenter.onSaveCleanedSubtitles()
+
+        then: 'success message mentions only SDH count'
+            1 * view.showSuccess("Cleaned subtitles saved as:\ninput_no_sdh.srt\nRemoved 5 SDH entries")
     }
 }
