@@ -11,7 +11,8 @@ class TestResourceUtils {
         if (resourceStream == null) {
             throw new IllegalArgumentException("Resource not found: ${resourcePath}")
         }
-        def targetFile = tempDir.resolve("test_${resourceFileName}").toFile()
+        def baseName = new File(resourceFileName).name
+        def targetFile = tempDir.resolve("test_${baseName}").toFile()
         Files.copy(resourceStream, targetFile.toPath())
         return targetFile
     }

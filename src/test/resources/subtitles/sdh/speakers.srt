@@ -1,0 +1,51 @@
+1
+00:00:01,000 --> 00:00:03,000
+OFFICER #1: Stop right there
+
+2
+00:00:04,000 --> 00:00:06,000
+DR. SMITH: What happened?
+
+3
+00:00:07,000 --> 00:00:09,000
+[JOSÉ]: ¿Qué pasa?
+
+4
+00:00:10,000 --> 00:00:12,000
+MÜLLER (shouting): Halt!
+
+5
+00:00:13,000 --> 00:00:15,000
+MAN #2 (OFF-SCREEN): Over here!
+
+6
+00:00:16,000 --> 00:00:18,000
+[GIRL, 5 YEARS OLD] I want ice cream
+
+7
+00:00:19,000 --> 00:00:21,000
+CAPTAIN O'BRIEN: Ready the ship
+
+8
+00:00:22,000 --> 00:00:24,000
+[MAN 1 & MAN 2]: Together we stand
+
+9
+00:00:25,000 --> 00:00:27,000
+[boy] She sleepwalks sometimes.
+
+10
+00:00:28,000 --> 00:00:30,000
+[woman on TV] No, thanks.
+
+11
+00:00:31,000 --> 00:00:33,000
+[man] You should tell your brother.
+
+12
+00:00:34,000 --> 00:00:36,000
+[Wesker] Hey!
+
+13
+00:00:37,000 --> 00:00:39,000
+[Jill] Come on, just through here.
