@@ -61,24 +61,12 @@ class SdhEdgeCasesSpec extends Specification {
             '<i>♪ "Yesterday" by The Beatles playing ♪</i> kept'             | 9          | '<i>♪ "Yesterday" by The Beatles playing ♪</i>'
             'song info in brackets kept'                                     | 10         | '["My Favourite Game" playing on stereo]'
             '[music: "..." playing] song info in brackets kept'              | 11         | '[music: "Bohemian Rhapsody" playing]'
+            'sound desc on lyric line cleaned'                               | 3          | '♪ Na na na ♪'
+            'humming sound desc on lyric line cleaned'                       | 4          | '♪ La la la ♪'
             'plain dialog with " by " trigger word'                          | 12         | 'I was attacked by a bear'
             'plain dialog with "playing" trigger word'                       | 13         | "They're playing games"
             'plain dialog with quotes'                                       | 14         | 'He "borrowed" my car'
             'lyrics + sound desc on two dashed lines'                        | 15         | '♪ Do re mi ♪'
-    }
-
-    @PendingFeature(reason = 'music-symbol guard in processLine preserves the whole original line when ♪ is present, so sound descriptions on lyric lines are never cleaned')
-    def 'music.srt — known bugs: #description'() {
-        given:
-            def results = cleanedByIndex('music.srt')
-
-        expect:
-            results[entryIndex] == expectedText
-
-        where:
-            description                                                       | entryIndex | expectedText
-            'sound desc on lyric line should be cleaned'                      | 3          | '♪ Na na na ♪'
-            'humming sound desc on lyric line should be cleaned'              | 4          | '♪ La la la ♪'
     }
 
     def 'mixed.srt — supported cases: #description'() {
@@ -94,14 +82,16 @@ class SdhEdgeCasesSpec extends Specification {
             'two bracket sound descs at start removed'                 | 2          | 'Hello there'
             'JOHN (quietly): full speaker with parens removed'         | 3          | "I can't believe it"
             'multi-line bracket speakers with dashes'                  | 4          | '-Hey there\n-What\'s up?'
+            '(music playing) ♪ La la la ♪ — sound desc removed'        | 5          | '♪ La la la ♪'
             'mid-sentence (coughs) paren removed'                      | 6          | "I can't finish this sentence"
+            'multi-line with second line being only-SDH'               | 8          | 'Morning'
             'pure SDH line on multi-line dialog removed'               | 10         | 'Hello?'
             'speaker on line 1 + pure SDH line 2 → line 1 cleaned'     | 11         | 'Come on, just through here.'
             '(sighs) pure paren entry removed'                         | 12         | null
             '(John sighs) pure paren entry removed'                    | 13         | null
     }
 
-    @PendingFeature(reason = 'mid-sentence bracketed SDH not removed; italic-wrapped bracket speakers not detected; music-symbol guard preserves sound descs')
+    @PendingFeature(reason = 'mid-sentence bracketed SDH not removed; italic-wrapped bracket speakers not detected')
     def 'mixed.srt — known bugs: #description'() {
         given:
             def results = cleanedByIndex('mixed.srt')
@@ -111,9 +101,7 @@ class SdhEdgeCasesSpec extends Specification {
 
         where:
             description                                                          | entryIndex | expectedText
-            '(music playing) ♪ La la la ♪ — sound desc should be removed'        | 5          | '♪ La la la ♪'
             '<i>[NARRATOR] (softly) ...</i> — speaker inside italics'            | 7          | '<i>Once upon a time</i>'
-            'multi-line with second line being only-SDH'                         | 8          | 'Morning'
             'mid-sentence [chuckles] should be removed'                          | 9          | 'Hey, whoa.'
     }
 
@@ -141,11 +129,12 @@ class SdhEdgeCasesSpec extends Specification {
             '[ANNOUNCER] uppercase bracket speaker'                           | 14         | 'And the winner is...'
             '<i>(wind howling)</i> on line 1 + dialog line 2'                 | 15         | "It's so cold"
             '(BREATHING HEAVILY) + two dashed dialog lines'                   | 16         | "-Run!\n-I'm trying!"
+            '♪♪ (upbeat jazz playing) — decorative ♪ entry removed'           | 11         | null
             '[boy] speaker + multi-line wrap'                                 | 17         | 'She sleepwalks sometimes\nsince our parents died.'
             'three-dash dialog'                                               | 19         | '-First person speaking\n-Second person responds\n-Third person adds comment'
     }
 
-    @PendingFeature(reason = 'music-symbol guard preserves sound desc with decorative ♪♪; mid-line bracket SDH not removed; bracket song info wrongly classified as SDH-only')
+    @PendingFeature(reason = 'mid-line bracket SDH not removed on dashed dialog line')
     def 'real-world.srt — known bugs: #description'() {
         given:
             def results = cleanedByIndex('real-world.srt')
@@ -155,7 +144,6 @@ class SdhEdgeCasesSpec extends Specification {
 
         where:
             description                                                       | entryIndex | expectedText
-            '♪♪ (upbeat jazz playing) — decorative ♪, should be removed'      | 11         | null
             'mid-line [chuckles] removed + bracket song info kept'            | 18         | '-Nobody, that\'s who.\n-["My Favourite Game" playing on stereo]'
     }
 

@@ -63,20 +63,17 @@ public class SubtitleCleanerService {
     }
 
     private String processLine(String line) {
-        // Remove leading dash
         String withoutDash = line.replaceFirst("^-\\s*", "");
 
-        // Check if line is only SDH content (before cleaning)
         if (SdhPatternMatcher.isOnlySdhContent(withoutDash)) {
             return "";
         }
 
-        // Clean SDH patterns from line
         String cleaned = SdhPatternMatcher.cleanLine(withoutDash);
 
-        // Preserve music symbols with lyrics
-        if (SdhPatternMatcher.hasMusicSymbols(line) && StringUtils.isNotBlank(cleaned)) {
-            return line.replaceFirst("^-\\s*", "");
+        // Cleaning may leave residual SDH (e.g. decorative ♪♪, an uppercase [SOUND] after speaker strip) — drop those too
+        if (SdhPatternMatcher.isOnlySdhContent(cleaned)) {
+            return "";
         }
 
         return cleaned;

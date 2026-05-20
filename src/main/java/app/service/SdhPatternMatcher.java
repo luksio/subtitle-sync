@@ -72,10 +72,6 @@ class SdhPatternMatcher {
         return line;
     }
 
-    public boolean hasMusicSymbols(String line) {
-        return line.contains("♪");
-    }
-
     private boolean containsSongInfo(String line) {
         return removeItalicTags(line).contains("\"");
     }
