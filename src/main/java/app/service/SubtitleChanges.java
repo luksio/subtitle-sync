@@ -4,13 +4,15 @@ import app.model.SubtitleEntry;
 
 import java.io.File;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Aggregated diff of a subtitle cleaning operation. Drives the changes log written next to the output file.
+ * outputFile is empty when no output SRT was written (input contained nothing to clean).
  */
 public record SubtitleChanges(
         File inputFile,
-        File outputFile,
+        Optional<File> outputFile,
         boolean removedSdh,
         boolean removedSpam,
         List<RemovedEntry> removedEntries,

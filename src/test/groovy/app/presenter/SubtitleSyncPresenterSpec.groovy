@@ -300,7 +300,7 @@ class SubtitleSyncPresenterSpec extends Specification {
             view.isRemoveSpamSelected() >> true
 
         and: 'service returns a result with removal and modification counts'
-            subtitleService.createCleanedSubtitles(inputFile, true, true) >> new CleanResult(outputFile, changesFile, 12, 2, 8)
+            subtitleService.createCleanedSubtitles(inputFile, true, true) >> new CleanResult(Optional.of(outputFile), changesFile, 12, 2, 8)
 
         when: 'user saves cleaned subtitles'
             presenter.onSaveCleanedSubtitles()
@@ -319,7 +319,7 @@ class SubtitleSyncPresenterSpec extends Specification {
             view.isRemoveSpamSelected() >> false
 
         and: 'service returns a result'
-            subtitleService.createCleanedSubtitles(inputFile, true, false) >> new CleanResult(outputFile, changesFile, 5, 0, 3)
+            subtitleService.createCleanedSubtitles(inputFile, true, false) >> new CleanResult(Optional.of(outputFile), changesFile, 5, 0, 3)
 
         when: 'user saves cleaned subtitles'
             presenter.onSaveCleanedSubtitles()
@@ -338,12 +338,30 @@ class SubtitleSyncPresenterSpec extends Specification {
             view.isRemoveSpamSelected() >> true
 
         and: 'service returns a result'
-            subtitleService.createCleanedSubtitles(inputFile, false, true) >> new CleanResult(outputFile, changesFile, 0, 2, 0)
+            subtitleService.createCleanedSubtitles(inputFile, false, true) >> new CleanResult(Optional.of(outputFile), changesFile, 0, 2, 0)
 
         when: 'user saves cleaned subtitles'
             presenter.onSaveCleanedSubtitles()
 
         then: 'success message omits both SDH and modified lines'
             1 * view.showSuccess("Cleaned subtitles saved as:\ninput_no_spam.srt\nChanges log: input_no_spam_changes.log\nRemoved 2 spam entries")
+    }
+
+    def 'should show no-changes message when the service skipped writing an output file'() {
+        given: 'file is selected with both options enabled'
+            def inputFile = Files.createFile(tempDir.resolve("input.srt")).toFile()
+            def changesFile = tempDir.resolve("input_cleaned_changes.log").toFile()
+            view.getCurrentSubtitleFile() >> inputFile
+            view.isRemoveSdhSelected() >> true
+            view.isRemoveSpamSelected() >> true
+
+        and: 'service produced no output (nothing to clean)'
+            subtitleService.createCleanedSubtitles(inputFile, true, true) >> new CleanResult(Optional.empty(), changesFile, 0, 0, 0)
+
+        when: 'user saves cleaned subtitles'
+            presenter.onSaveCleanedSubtitles()
+
+        then: 'success message explains no changes were needed and points to the log'
+            1 * view.showSuccess("No changes needed — input had no SDH or spam to clean.\nChanges log: input_cleaned_changes.log")
     }
 }

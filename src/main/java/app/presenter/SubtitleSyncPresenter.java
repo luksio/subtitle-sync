@@ -126,8 +126,12 @@ public class SubtitleSyncPresenter {
     }
 
     private String buildCleaningSummary(CleanResult result, boolean removeSdh, boolean removeSpam) {
+        if (result.outputFile().isEmpty()) {
+            return "No changes needed — input had no SDH or spam to clean.\n"
+                    + "Changes log: " + result.changesFile().getName();
+        }
         StringBuilder sb = new StringBuilder("Cleaned subtitles saved as:\n")
-                .append(result.outputFile().getName())
+                .append(result.outputFile().get().getName())
                 .append("\nChanges log: ").append(result.changesFile().getName());
         if (removeSdh) {
             sb.append("\nRemoved ").append(result.sdhRemoved()).append(" SDH entries");

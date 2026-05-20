@@ -28,8 +28,12 @@ class SubtitleChangesLogWriter {
         sb.append("Subtitle Cleaning Report\n");
         sb.append("========================\n");
         sb.append("Input:   ").append(c.inputFile().getName()).append("\n");
-        sb.append("Output:  ").append(c.outputFile().getName()).append("\n");
+        sb.append("Output:  ").append(formatOutput(c)).append("\n");
         sb.append("Options: ").append(formatOptions(c)).append("\n\n");
+    }
+
+    private String formatOutput(SubtitleChanges c) {
+        return c.outputFile().map(File::getName).orElse("(not written — no changes)");
     }
 
     private String formatOptions(SubtitleChanges c) {

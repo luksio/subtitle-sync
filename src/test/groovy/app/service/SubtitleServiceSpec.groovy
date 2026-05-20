@@ -778,14 +778,15 @@ Downloaded from www.opensubtitles.org
             def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
 
         then: 'output file uses the combined suffix'
-            result.outputFile().exists()
-            result.outputFile().name == 'movie_cleaned.srt'
+            result.outputFile().isPresent()
+            result.outputFile().get().exists()
+            result.outputFile().get().name == 'movie_cleaned.srt'
 
         and: 'pure SDH entries (1 and 5) and the URL entry (4) are dropped, leaving only the dialog rows with their original indices'
             result.sdhRemoved() == 2
             result.spamRemoved() == 1
             result.modified() == 1
-            result.outputFile().text == '''2
+            result.outputFile().get().text == '''2
 00:00:04,000 --> 00:00:06,000
 Buenos días
 
@@ -820,6 +821,7 @@ Downloaded from www.opensubtitles.org
             def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
 
         then: 'changes log sits next to the output and uses the .log extension'
+            result.outputFile().isPresent()
             result.changesFile().exists()
             result.changesFile().name == 'movie_cleaned_changes.log'
 
@@ -857,7 +859,7 @@ Modified entries
 '''
     }
 
-    def 'should write a changes log noting that no changes were made when input has no SDH or spam'() {
+    def 'should skip writing the output SRT when nothing changed, while still creating the changes log'() {
         given: 'SRT with only plain dialog'
             def inputContent = '''1
 00:00:01,000 --> 00:00:03,000
@@ -872,14 +874,18 @@ Second plain line.
         when: 'cleaning with both options enabled'
             def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
 
-        then: 'counts are zero and log reports no changes'
+        then: 'no output SRT was created — an identical copy would be noise'
+            result.outputFile().isEmpty()
+            !new File(tempDir.toFile(), 'clean_cleaned.srt').exists()
+
+        and: 'counts are zero and log reports no changes, noting that no output was written'
             result.sdhRemoved() == 0
             result.spamRemoved() == 0
             result.modified() == 0
             result.changesFile().text == '''Subtitle Cleaning Report
 ========================
 Input:   clean.srt
-Output:  clean_cleaned.srt
+Output:  (not written — no changes)
 Options: Remove SDH, Remove spam
 
 Summary

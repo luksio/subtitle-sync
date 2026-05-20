@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -42,20 +43,31 @@ public class SubtitleService {
         List<SubtitleEntry> afterSdh = removeSdh ? SubtitleCleanerService.removeSdh(original) : original;
         List<SubtitleEntry> afterSpam = removeSpam ? SubtitleCleanerService.removeSpam(afterSdh) : afterSdh;
 
-        File outputFile = generateOutputFile(inputFile, suffixFor(removeSdh, removeSpam));
-        writeSrt(outputFile, afterSpam);
+        File potentialOutput = generateOutputFile(inputFile, suffixFor(removeSdh, removeSpam));
+        SubtitleChanges changes = computeChanges(inputFile, removeSdh, removeSpam, original, afterSdh, afterSpam);
 
-        SubtitleChanges changes = computeChanges(inputFile, outputFile, removeSdh, removeSpam,
-                original, afterSdh, afterSpam);
-        File changesFile = changesLogFor(outputFile);
-        SubtitleChangesLogWriter.write(changesFile, changes);
+        // Skip writing the output SRT when nothing actually changed — an identical copy is just noise
+        Optional<File> writtenOutput = Optional.empty();
+        if (!changes.removedEntries().isEmpty() || !changes.modifiedEntries().isEmpty()) {
+            writeSrt(potentialOutput, afterSpam);
+            writtenOutput = Optional.of(potentialOutput);
+        }
+
+        SubtitleChanges changesWithOutput = withOutput(changes, writtenOutput);
+        File changesFile = changesLogFor(potentialOutput);
+        SubtitleChangesLogWriter.write(changesFile, changesWithOutput);
 
         long sdhRemoved = changes.removedEntries().stream().filter(re -> re.reason() == RemovalReason.SDH).count();
         long spamRemoved = changes.removedEntries().stream().filter(re -> re.reason() == RemovalReason.SPAM).count();
-        return new CleanResult(outputFile, changesFile, (int) sdhRemoved, (int) spamRemoved, changes.modifiedEntries().size());
+        return new CleanResult(writtenOutput, changesFile, (int) sdhRemoved, (int) spamRemoved, changes.modifiedEntries().size());
     }
 
-    private SubtitleChanges computeChanges(File inputFile, File outputFile, boolean removeSdh, boolean removeSpam,
+    private SubtitleChanges withOutput(SubtitleChanges c, Optional<File> outputFile) {
+        return new SubtitleChanges(c.inputFile(), outputFile, c.removedSdh(), c.removedSpam(),
+                c.removedEntries(), c.modifiedEntries(), c.unchangedCount());
+    }
+
+    private SubtitleChanges computeChanges(File inputFile, boolean removeSdh, boolean removeSpam,
                                            List<SubtitleEntry> original, List<SubtitleEntry> afterSdh,
                                            List<SubtitleEntry> afterSpam) {
         Set<Integer> survivedSdh = indices(afterSdh);
@@ -81,7 +93,7 @@ public class SubtitleService {
         }
 
         int unchanged = afterSpam.size() - modified.size();
-        return new SubtitleChanges(inputFile, outputFile, removeSdh, removeSpam, removed, modified, unchanged);
+        return new SubtitleChanges(inputFile, Optional.empty(), removeSdh, removeSpam, removed, modified, unchanged);
     }
 
     private Set<Integer> indices(List<SubtitleEntry> entries) {
