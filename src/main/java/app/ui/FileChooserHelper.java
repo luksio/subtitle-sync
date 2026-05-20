@@ -1,5 +1,7 @@
 package app.ui;
 
+import app.util.UserPreferences;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -10,6 +12,7 @@ public class FileChooserHelper {
     public static File chooseFile(Component parent, String title, String... extensions) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle(title);
+        UserPreferences.getLastDirectory().ifPresent(fileChooser::setCurrentDirectory);
 
         if (extensions.length == 1) {
             // Single extension
@@ -31,6 +34,13 @@ public class FileChooserHelper {
         }
 
         int result = fileChooser.showOpenDialog(parent);
-        return (result == JFileChooser.APPROVE_OPTION) ? fileChooser.getSelectedFile() : null;
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return null;
+        }
+        File selected = fileChooser.getSelectedFile();
+        if (selected != null) {
+            UserPreferences.setLastDirectory(selected.getParentFile());
+        }
+        return selected;
     }
 }
