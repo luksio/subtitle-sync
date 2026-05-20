@@ -3,44 +3,42 @@ package app.ui;
 import app.util.UserPreferences;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
+import java.io.FilenameFilter;
+import java.util.Arrays;
 
 public class FileChooserHelper {
 
     public static File chooseFile(Component parent, String title, String... extensions) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle(title);
-        UserPreferences.getLastDirectory().ifPresent(fileChooser::setCurrentDirectory);
-
-        if (extensions.length == 1) {
-            // Single extension
-            String ext = extensions[0];
-            String description = ext.toUpperCase() + " files (*." + ext + ")";
-            FileNameExtensionFilter filter = new FileNameExtensionFilter(description, ext);
-            fileChooser.setFileFilter(filter);
-        } else if (extensions.length > 1) {
-            // Multiple extensions
-            StringBuilder description = new StringBuilder("Supported files (");
-            for (int i = 0; i < extensions.length; i++) {
-                if (i > 0) description.append(", ");
-                description.append("*.").append(extensions[i]);
-            }
-            description.append(")");
-
-            FileNameExtensionFilter filter = new FileNameExtensionFilter(description.toString(), extensions);
-            fileChooser.setFileFilter(filter);
+        // FileDialog uses the OS-native picker (Finder on macOS, Win32 on Windows) instead of Swing's JFileChooser
+        FileDialog dialog = new FileDialog(JOptionPane.getFrameForComponent(parent), title, FileDialog.LOAD);
+        UserPreferences.getLastDirectory()
+                .ifPresent(dir -> dialog.setDirectory(dir.getAbsolutePath()));
+        if (extensions.length > 0) {
+            dialog.setFilenameFilter(extensionFilter(extensions));
         }
 
-        int result = fileChooser.showOpenDialog(parent);
-        if (result != JFileChooser.APPROVE_OPTION) {
+        dialog.setVisible(true);
+
+        String filename = dialog.getFile();
+        String directory = dialog.getDirectory();
+        if (filename == null || directory == null) {
             return null;
         }
-        File selected = fileChooser.getSelectedFile();
-        if (selected != null) {
-            UserPreferences.setLastDirectory(selected.getParentFile());
-        }
+        File selected = new File(directory, filename);
+        UserPreferences.setLastDirectory(selected.getParentFile());
         return selected;
+    }
+
+    private static FilenameFilter extensionFilter(String[] extensions) {
+        String[] lowered = Arrays.stream(extensions).map(String::toLowerCase).toArray(String[]::new);
+        return (dir, name) -> {
+            String lowerName = name.toLowerCase();
+            for (String ext : lowered) {
+                if (lowerName.endsWith("." + ext)) return true;
+            }
+            return false;
+        };
     }
 }
