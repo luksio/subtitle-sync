@@ -1,7 +1,6 @@
 package app.service
 
 import app.TestResourceUtils
-import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -84,25 +83,13 @@ class SdhEdgeCasesSpec extends Specification {
             'multi-line bracket speakers with dashes'                  | 4          | '-Hey there\n-What\'s up?'
             '(music playing) ♪ La la la ♪ — sound desc removed'        | 5          | '♪ La la la ♪'
             'mid-sentence (coughs) paren removed'                      | 6          | "I can't finish this sentence"
+            '<i>[NARRATOR] (softly) ...</i> — speaker inside italics'  | 7          | '<i>Once upon a time</i>'
             'multi-line with second line being only-SDH'               | 8          | 'Morning'
+            'mid-sentence [chuckles] removed'                          | 9          | 'Hey, whoa.'
             'pure SDH line on multi-line dialog removed'               | 10         | 'Hello?'
             'speaker on line 1 + pure SDH line 2 → line 1 cleaned'     | 11         | 'Come on, just through here.'
             '(sighs) pure paren entry removed'                         | 12         | null
             '(John sighs) pure paren entry removed'                    | 13         | null
-    }
-
-    @PendingFeature(reason = 'mid-sentence bracketed SDH not removed; italic-wrapped bracket speakers not detected')
-    def 'mixed.srt — known bugs: #description'() {
-        given:
-            def results = cleanedByIndex('mixed.srt')
-
-        expect:
-            results[entryIndex] == expectedText
-
-        where:
-            description                                                          | entryIndex | expectedText
-            '<i>[NARRATOR] (softly) ...</i> — speaker inside italics'            | 7          | '<i>Once upon a time</i>'
-            'mid-sentence [chuckles] should be removed'                          | 9          | 'Hey, whoa.'
     }
 
     def 'real-world.srt — supported cases: #description'() {
@@ -131,20 +118,8 @@ class SdhEdgeCasesSpec extends Specification {
             '(BREATHING HEAVILY) + two dashed dialog lines'                   | 16         | "-Run!\n-I'm trying!"
             '♪♪ (upbeat jazz playing) — decorative ♪ entry removed'           | 11         | null
             '[boy] speaker + multi-line wrap'                                 | 17         | 'She sleepwalks sometimes\nsince our parents died.'
-            'three-dash dialog'                                               | 19         | '-First person speaking\n-Second person responds\n-Third person adds comment'
-    }
-
-    @PendingFeature(reason = 'mid-line bracket SDH not removed on dashed dialog line')
-    def 'real-world.srt — known bugs: #description'() {
-        given:
-            def results = cleanedByIndex('real-world.srt')
-
-        expect:
-            results[entryIndex] == expectedText
-
-        where:
-            description                                                       | entryIndex | expectedText
             'mid-line [chuckles] removed + bracket song info kept'            | 18         | '-Nobody, that\'s who.\n-["My Favourite Game" playing on stereo]'
+            'three-dash dialog'                                               | 19         | '-First person speaking\n-Second person responds\n-Third person adds comment'
     }
 
     def 'malformed.srt — current behaviour: #description'() {

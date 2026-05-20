@@ -16,7 +16,9 @@ class SdhPatternMatcher {
     private static final Pattern SPEAKER_NAME_BRACKETS = Pattern.compile("^\\[([^]]+)]\\s*:?\\s*");
     private static final Pattern SOUND_IN_PARENS = Pattern.compile("\\s*\\([^)]+\\)\\s*");
     private static final Pattern SOUND_IN_BRACKETS = Pattern.compile("^\\s*\\[\\s*([a-z][^]]*)]\\s*");
+    private static final Pattern MID_LINE_SOUND_BRACKET = Pattern.compile("\\s*\\[([a-z][^]]*)]\\s*");
     private static final Pattern ITALIC_TAGS = Pattern.compile("</?i>");
+    private static final Pattern ITALIC_WRAPPER = Pattern.compile("^<i>(.*)</i>$");
 
     public boolean isOnlySdhContent(String line) {
         String cleaned = removeItalicTags(line).trim();
@@ -46,6 +48,22 @@ class SdhPatternMatcher {
     }
 
     public String cleanLine(String line) {
+        // Process italic-wrapped lines transparently so patterns can match the inner text.
+        // Only trim/rewrap when something actually changed, otherwise preserve original whitespace.
+        Matcher italicWrapper = ITALIC_WRAPPER.matcher(line);
+        if (italicWrapper.matches()) {
+            String originalInner = italicWrapper.group(1);
+            String cleanedInner = applyPatterns(originalInner);
+            if (cleanedInner.equals(originalInner)) {
+                return line;
+            }
+            String trimmed = cleanedInner.trim();
+            return trimmed.isBlank() ? "" : "<i>" + trimmed + "</i>";
+        }
+        return applyPatterns(line).trim();
+    }
+
+    private String applyPatterns(String line) {
         String result = line;
 
         // Remove speaker names (re-apply uppercase pattern after bracket speaker for chained labels like "[GIRL] MARY:")
@@ -61,7 +79,11 @@ class SdhPatternMatcher {
             result = SOUND_IN_PARENS.matcher(result).replaceAll(" ");
         }
 
-        return result.trim();
+        // Remove mid-sentence bracketed sound descriptions, leaving song-info-looking brackets alone
+        result = MID_LINE_SOUND_BRACKET.matcher(result)
+                .replaceAll(m -> m.group(1).contains("\"") ? m.group() : " ");
+
+        return result;
     }
 
     private String stripBracketIfNotSongInfo(String line, Pattern pattern) {
