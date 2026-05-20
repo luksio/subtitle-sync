@@ -194,6 +194,42 @@ Please, stop. Please.''')
             result[0].text() == 'ID, please.'
     }
 
+    def 'should preserve original dash style on dialog lines that need no SDH cleanup: #description'() {
+        given: 'multi-line dialog entry with no SDH content'
+            def entries = TestFileUtils.parseTestSrt(tempDir, """1
+00:00:01,000 --> 00:00:03,000
+${dialog}""")
+
+        when: 'running SDH removal'
+            def result = SubtitleCleanerService.removeSdh(entries)
+
+        then: 'every line is byte-for-byte identical — dash style untouched'
+            result.size() == 1
+            result[0].text() == dialog
+
+        where:
+            description                          | dialog
+            'dash + space style'                 | '- We got an ID on her?\n- No, sir.'
+            'dash without space style'           | '-Hi, Ernie.\n-Got a minute?'
+            'mixed: line 1 with space, line 2 without' | '- We got an ID on her?\n-No, sir.'
+            'three-line dialog with spaces'      | '- First.\n- Second.\n- Third.'
+    }
+
+    def 'should keep original dash style when speaker prefix is stripped'() {
+        given: 'multi-line dialog where second line has a speaker prefix and uses "- " style'
+            def entries = TestFileUtils.parseTestSrt(tempDir, '''1
+00:00:01,000 --> 00:00:03,000
+- Hi, Ernie.
+- ERNESTO: So, uh, tonight,''')
+
+        when: 'running SDH removal'
+            def result = SubtitleCleanerService.removeSdh(entries)
+
+        then: 'speaker name is stripped but the "- " prefix on each line is preserved'
+            result.size() == 1
+            result[0].text() == '- Hi, Ernie.\n- So, uh, tonight,'
+    }
+
     def 'should remove entries containing URLs'() {
         given: 'subtitle entry containing URL'
             def entries = TestFileUtils.parseTestSrt(tempDir, """1

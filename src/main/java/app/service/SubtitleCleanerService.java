@@ -7,12 +7,14 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @UtilityClass
 public class SubtitleCleanerService {
 
     private static final Pattern URL_PATTERN = Pattern.compile("(?:https?://|www\\.)\\S+");
+    private static final Pattern DASH_PREFIX = Pattern.compile("^-\\s*");
 
     public List<SubtitleEntry> removeSpam(List<SubtitleEntry> entries) {
         return entries.stream()
@@ -35,24 +37,23 @@ public class SubtitleCleanerService {
     private Option<SubtitleEntry> cleanSdhFromEntry(SubtitleEntry entry) {
         String[] lines = entry.text().split("\n");
         List<String> cleanedLines = new ArrayList<>();
-        List<Boolean> hadDash = new ArrayList<>();
+        // Per-line original dash prefix so untouched dialog lines round-trip byte-for-byte
+        List<String> dashPrefixes = new ArrayList<>();
 
-        // First pass: clean lines and track which had dashes
         for (String line : lines) {
-            boolean lineHadDash = line.trim().startsWith("-");
-            String processedLine = processLine(line);
+            String dashPrefix = extractDashPrefix(line);
+            String withoutDash = line.substring(dashPrefix.length());
+            String processedLine = processLine(withoutDash);
             if (StringUtils.isNotBlank(processedLine)) {
                 cleanedLines.add(processedLine);
-                hadDash.add(lineHadDash);
+                dashPrefixes.add(dashPrefix);
             }
         }
 
-        // If multiple lines remain, restore dashes where they existed
+        // Restore each line's original dash prefix only when multiple dialog lines remain
         if (cleanedLines.size() > 1) {
             for (int i = 0; i < cleanedLines.size(); i++) {
-                if (hadDash.get(i)) {
-                    cleanedLines.set(i, "-" + cleanedLines.get(i));
-                }
+                cleanedLines.set(i, dashPrefixes.get(i) + cleanedLines.get(i));
             }
         }
 
@@ -62,9 +63,12 @@ public class SubtitleCleanerService {
                 .map(entry::withText);
     }
 
-    private String processLine(String line) {
-        String withoutDash = line.replaceFirst("^-\\s*", "");
+    private String extractDashPrefix(String line) {
+        Matcher m = DASH_PREFIX.matcher(line);
+        return m.find() ? m.group() : "";
+    }
 
+    private String processLine(String withoutDash) {
         if (SdhPatternMatcher.isOnlySdhContent(withoutDash)) {
             return "";
         }
