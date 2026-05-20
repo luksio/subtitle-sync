@@ -1,123 +1,112 @@
-# CLAUDE.md
+# Subtitle Sync — project guide
 
-This file provides guidance to Claude Code when working with this repository.
+Java 24 Swing desktop app for SRT subtitle files. Features: time-offset shifting, frame-rate conversion (with ffprobe detection), SDH/spam cleaning with an audit log.
 
-## Project Overview
+## Build & run
 
-**Subtitle Sync** is a Java 24 desktop GUI application (Swing) for synchronizing and converting SRT subtitle files:
-- **Time Offset Adjustment** - shift subtitle timings by seconds
-- **Frame Rate Conversion** - convert between different frame rates (e.g., 23.976 ↔ 25 FPS)
-- **FFprobe Integration** - automatic frame rate detection from video files
+- Build: Maven 3.14+ via Makefile wrapper. `make help` lists targets.
+- Run: `make run`. Tests: `mvn test`, single class: `mvn test -Dtest=ClassName`.
+- Main class: `app.SubtitleSyncApp`.
+- **External requirement**: `ffprobe` on PATH (only needed for frame-rate detection from video files; the rest works without it).
 
-## Build & Run
+## Do NOT launch the app to verify changes
 
-- **Build tool:** Maven 3.14+ (with Makefile wrapper)
-- **Commands:** Run `make help` for all targets, or use standard Maven commands
-- **Main class:** `app.SubtitleSyncApp`
+User verifies UI manually after each change. Don't `make run` or otherwise launch the app yourself, even for "smoke testing".
 
-## Architecture
-
-### Package Structure
+## Package layout
 
 ```
 app/
-├── SubtitleSyncApp              # Main entry point (JFrame)
-├── presenter/                   # MVP Presenters
-│   └── SubtitleSyncPresenter    # Orchestrates UI logic, event handling
-├── ui/                          # Swing GUI
-│   ├── SubtitleSyncPanel        # Main tabbed interface (View implementation)
-│   ├── FileChooserHelper        # File selection dialogs
-│   └── view/
-│       └── SubtitleSyncView     # View interface (no Swing types)
-├── service/                     # Business logic
-│   ├── SubtitleService          # SRT parsing, shifting, conversion
-│   └── VideoMetadataService     # FFprobe integration
-├── model/                       # Domain models
-│   ├── SubtitleEntry (record)   # Immutable subtitle with Duration-based timing
-│   └── FrameRate (enum)         # Supported FPS with BigDecimal precision
-├── util/                        # Utilities
-│   └── CharsetDetector          # Automatic encoding detection (juniversalchardet)
-└── exception/
-    └── InvalidSubtitleException # Validation errors
+├── SubtitleSyncApp                  # main()
+├── presenter/SubtitleSyncPresenter  # all UI logic, event handling
+├── ui/
+│   ├── SubtitleSyncPanel            # JFrame content, implements SubtitleSyncView
+│   ├── FileChooserHelper            # wraps java.awt.FileDialog (native OS picker)
+│   └── view/SubtitleSyncView        # view interface, no Swing types
+├── service/
+│   ├── SubtitleParserService        # SRT → List<SubtitleEntry>
+│   ├── SubtitleService              # file-level operations (shift, convert, clean)
+│   ├── SubtitleCleanerService       # removeSdh / removeSpam on List<SubtitleEntry>
+│   ├── SdhPatternMatcher            # all SDH regexes + cleanLine
+│   ├── SubtitleChanges              # diff record (removed/modified/unchanged)
+│   ├── SubtitleChangesLogWriter     # renders the *_changes.log file
+│   ├── CleanResult                  # output of createCleanedSubtitles
+│   └── VideoMetadataService         # ffprobe integration
+├── model/
+│   ├── SubtitleEntry (record)       # immutable, Duration-based timing, compact-constructor validation
+│   └── FrameRate (enum)             # supported FPS with BigDecimal precision
+├── util/
+│   ├── CharsetDetector              # juniversalchardet wrapper, returns Vavr Option
+│   └── UserPreferences              # persistent settings via java.util.prefs.Preferences
+└── exception/InvalidSubtitleException
 ```
 
-### Key Design Patterns
+## MVP architecture (hard rules)
 
-1. **Record with Validation** - `SubtitleEntry` uses compact constructor for immutable validated data
-2. **Functional Transformation** - operations return new instances (no mutation)
-3. **Functional Error Handling** - `CharsetDetector` returns Vavr `Option<Charset>` instead of null
-4. **Enum with Behavior** - `FrameRate` encapsulates FPS values and conversion logic
-5. **Utility Class Pattern** - stateless utilities use Lombok `@UtilityClass`
+1. Services have **zero** Swing/AWT imports — keeps them headless-testable.
+2. Presenters orchestrate; they own service references and call view methods.
+3. Views are interfaces (`SubtitleSyncView`); the Swing panel is one implementation. Presenter tests use mock views.
+4. Swing listeners delegate straight to presenter methods — no business logic in the panel.
+5. Constructor injection only (services → presenter → view).
 
-### Swing Architecture (MVP Pattern)
+## Subtitle cleaning pipeline
 
-**Core Rules:**
-1. **Services have ZERO Swing dependencies** - no `javax.swing.*` or `java.awt.*` imports
-2. **Presenters orchestrate** - handle all UI logic, event handling, service coordination
-3. **Views are interfaces** - Swing panels implement view interfaces (testing with mocks)
-4. **Events go through presenters** - `ActionListener`/`DocumentListener` delegate to presenter
-5. **Constructor injection** - services → presenters → views
+```
+createCleanedSubtitles(file, removeSdh, removeSpam)
+  → SubtitleParserService.parseFile
+  → SubtitleCleanerService.removeSdh (line-by-line via SdhPatternMatcher)
+  → SubtitleCleanerService.removeSpam (URL filter)
+  → diff against original → SubtitleChanges
+  → write SRT (only if anything actually changed)
+  → SubtitleChangesLogWriter writes *_changes.log next to output
+```
 
-**Reference:** `SubtitleSyncPresenter` + `SubtitleSyncView` + `SubtitleSyncPanel`
+Output naming:
+- `_shifted.srt` (time offset)
+- `_<from>_to_<to>.srt` (frame rate)
+- `_cleaned.srt` / `_no_sdh.srt` / `_no_spam.srt` (cleaning, depending on which options were on)
+- `*_changes.log` always written alongside cleaning output, even when no changes happened
 
-**Testing:** Presenters use mock views (no Swing dependencies)
+## Precision
 
-### Time Precision
+- `java.time.Duration` for timing (nanosecond internally; ms in SRT output).
+- `BigDecimal` for frame-rate conversion ratios (10 decimal places, HALF_UP).
 
-- `java.time.Duration` for subtitle timing (nanosecond precision internally)
-- `BigDecimal` for frame rate conversions (10 decimal places, HALF_UP rounding)
-- SRT output format uses millisecond precision
+## Encoding
 
-## Technology Stack
+- Auto-detected via juniversalchardet. Two entry points on `CharsetDetector`: `detectCharset` (Vavr `Option`) and `detectCharsetWithFallback` (defaults to windows-1250, the most common Central European subtitle encoding).
+- Input read in detected encoding, output always UTF-8.
+- Parser handles BOM and is lenient with whitespace and blank lines.
 
-- **Java 24** - records, pattern matching, modern features
-- **Lombok 1.18.38** - `@Log`, `@UtilityClass`, `@Getter`, `@AllArgsConstructor`, `@RequiredArgsConstructor`
-- **Vavr 0.10.6** - functional programming (`Option`, `Either`, `Try`)
-- **Apache Commons Lang3 3.18** - `StringUtils`
-- **juniversalchardet 2.5.0** - automatic charset detection (Mozilla's UniversalChardet)
-- **Spock 2.4-M6** + Groovy 4.0.28 - testing with Given-When-Then syntax
-- **Swing** - GUI framework
+## SRT format reminder
 
-## Development Notes
+```
+index
+HH:MM:SS,mmm --> HH:MM:SS,mmm
+text (may be multi-line)
 
-### Character Encoding
+```
 
-- **Automatic detection** via juniversalchardet (detects UTF-8, windows-1250, ISO-8859-1, ISO-8859-2, etc.)
-- Uses buffered reading (4KB chunks) for efficiency
-- Two detection modes:
-  - `detectCharset()` - returns Vavr `Option<Charset>`, may return None
-  - `detectCharsetWithFallback()` - always returns Charset, uses fallback when detection fails
-- **Default fallback**: Windows-1250 (most common for Central European subtitles)
-- Output always written in UTF-8
-
-### SRT Format
-
-- Format: `index\ntimeline\ntext\n\n`
-- Timeline: `HH:MM:SS,mmm --> HH:MM:SS,mmm`
-- Parser handles BOM (Byte Order Mark) at file start
-- Parser is lenient with whitespace and blank lines
-- Multi-line subtitle text is preserved
-
-### Output File Naming
-
-- Time-shifted: `{original}_shifted.srt`
-- Frame rate converted: `{original}_{from_fps}_to_{to_fps}.srt`
-  - Example: `movie_25_fps_to_23_976_fps.srt`
-
-### FFprobe Integration
-
-- Requires FFprobe in system PATH
-- Extracts `r_frame_rate` from video stream metadata
-- Matches detected FPS to closest `FrameRate` enum (within 0.5 FPS tolerance)
-- Gracefully degrades if FFprobe unavailable
-
-### Locale
-
-- UI strings are in English
+Multi-line text is preserved through all operations.
 
 ## Testing
 
-- **Framework:** Spock 2.4-M6 (Groovy 4.0.28)
-- **Test location:** `src/test/groovy/app/`
-- **Test resources:** `src/test/resources/subtitles/` (sample SRT files in various encodings)
-- **Style:** Given-When-Then syntax with `@TempDir` for file handling
+- Spock 2.4-M6 + Groovy 4.0.28, Given-When-Then style.
+- Tests live in `src/test/groovy/app/`, mirroring main packages.
+- Fixtures in `src/test/resources/subtitles/`:
+  - Top level: charset detection samples (`central_european_*`, `western_european_*`, `multilingual_utf8`).
+  - `sdh/`: SDH edge-case fixtures grouped by concern (`speakers.srt`, `music.srt`, `mixed.srt`, `real-world.srt`, `malformed.srt`). Driven by `SdhEdgeCasesSpec` with parameterized rows.
+- `@PendingFeature(reason = "...")` marks tests that assert the *intended* behaviour for a known bug. When a fix lands, the iteration starts passing → Spock fails the build with "passes unexpectedly" → move that row from the pending method to the supported method in the same spec. This is the project's bug-tracking convention; prefer it over external TODO files.
+
+## Tech stack
+
+- Java 24 (records, pattern matching, `Matcher.replaceAll(Function)`).
+- Lombok 1.18.38.
+- Vavr 0.10.6 — used sparingly (`Option` in `CharsetDetector` and `SubtitleCleanerService`); rest of code uses Java `Optional`.
+- Apache Commons Lang3 3.18.
+- juniversalchardet 2.5.0.
+- Spock 2.4-M6, Groovy 4.0.28.
+
+## Locale
+
+UI strings and logs are English. User-facing prose in this repo stays English regardless of conversation language.
