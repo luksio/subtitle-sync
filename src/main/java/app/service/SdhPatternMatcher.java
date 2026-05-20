@@ -9,13 +9,13 @@ import java.util.regex.Pattern;
 @UtilityClass
 class SdhPatternMatcher {
 
+    // Optional outer ( ) tolerate real-world malformed SDH like "( CRYING )" wrapped in extra parens or "(MUSIC ♪))"
     private static final Pattern SOUND_DESCRIPTION_PARENS = Pattern.compile("^\\s*\\(?\\s*\\([^)]+\\)\\s*\\)?\\s*$");
     private static final Pattern SOUND_DESCRIPTION_BRACKETS = Pattern.compile("^\\s*\\[\\s*[^]]+\\s*]\\s*$");
     private static final Pattern ONLY_MUSIC_SYMBOLS = Pattern.compile("^[\\s♪]+$");
     private static final Pattern SPEAKER_NAME = Pattern.compile("^\\p{Lu}[\\p{Lu}\\d\\s#.'&-]+(?:\\([^)]+\\))?:\\s*");
     private static final Pattern SPEAKER_NAME_BRACKETS = Pattern.compile("^\\[([^]]+)]\\s*:?\\s*");
     private static final Pattern SOUND_IN_PARENS = Pattern.compile("\\s*\\([^)]+\\)\\s*");
-    private static final Pattern SOUND_IN_BRACKETS = Pattern.compile("^\\s*\\[\\s*([a-z][^]]*)]\\s*");
     private static final Pattern MID_LINE_SOUND_BRACKET = Pattern.compile("\\s*\\[([a-z][^]]*)]\\s*");
     private static final Pattern ITALIC_TAGS = Pattern.compile("</?i>");
     private static final Pattern ITALIC_WRAPPER = Pattern.compile("^<i>(.*)</i>$");
@@ -71,15 +71,9 @@ class SdhPatternMatcher {
         result = stripBracketIfNotSongInfo(result, SPEAKER_NAME_BRACKETS);
         result = SPEAKER_NAME.matcher(result).replaceFirst("");
 
-        // Remove sound descriptions in brackets at the beginning
-        result = stripBracketIfNotSongInfo(result, SOUND_IN_BRACKETS);
-
-        // Remove sound descriptions in parentheses (but not song info)
-        if (!containsSongInfo(result)) {
-            result = SOUND_IN_PARENS.matcher(result).replaceAll(" ");
-        }
-
-        // Remove mid-sentence bracketed sound descriptions, leaving song-info-looking brackets alone
+        // Remove sound descriptions in parens and brackets, gating each occurrence on song info
+        result = SOUND_IN_PARENS.matcher(result)
+                .replaceAll(m -> m.group().contains("\"") ? m.group() : " ");
         result = MID_LINE_SOUND_BRACKET.matcher(result)
                 .replaceAll(m -> m.group(1).contains("\"") ? m.group() : " ");
 
