@@ -51,19 +51,23 @@ class SdhEdgeCasesSpec extends Specification {
             results[entryIndex] == expectedText
 
         where:
-            description                                          | entryIndex | expectedText
-            'only music symbols → entry removed'                 | 1          | null
-            'lyrics with music symbols preserved'                | 2          | "♪ I'm so tired of workin' every day ♪"
-            '(Music playing in background) — entry removed'      | 5          | null
-            'sound desc line dropped, dialog line kept'          | 6          | 'I love this song'
-            '<i>♪ "Yesterday" by The Beatles playing ♪</i>'      | 9          | '<i>♪ "Yesterday" by The Beatles playing ♪</i>'
-            'plain dialog with " by " trigger word'              | 12         | 'I was attacked by a bear'
-            'plain dialog with "playing" trigger word'           | 13         | "They're playing games"
-            'plain dialog with quotes'                           | 14         | 'He "borrowed" my car'
-            'lyrics + sound desc on two dashed lines'            | 15         | '♪ Do re mi ♪'
+            description                                                      | entryIndex | expectedText
+            'only music symbols → entry removed'                             | 1          | null
+            'lyrics with music symbols preserved'                            | 2          | "♪ I'm so tired of workin' every day ♪"
+            '(Music playing in background) — entry removed'                  | 5          | null
+            'sound desc line dropped, dialog line kept'                      | 6          | 'I love this song'
+            'song info in parens kept'                                       | 7          | '(Music: "Don\'t Stop Me Now" playing)'
+            'song info in parens with italics kept'                          | 8          | '<i>(music: "Sweet Child O\' Mine" by Guns N\' Roses playing)</i>'
+            '<i>♪ "Yesterday" by The Beatles playing ♪</i> kept'             | 9          | '<i>♪ "Yesterday" by The Beatles playing ♪</i>'
+            'song info in brackets kept'                                     | 10         | '["My Favourite Game" playing on stereo]'
+            '[music: "..." playing] song info in brackets kept'              | 11         | '[music: "Bohemian Rhapsody" playing]'
+            'plain dialog with " by " trigger word'                          | 12         | 'I was attacked by a bear'
+            'plain dialog with "playing" trigger word'                       | 13         | "They're playing games"
+            'plain dialog with quotes'                                       | 14         | 'He "borrowed" my car'
+            'lyrics + sound desc on two dashed lines'                        | 15         | '♪ Do re mi ♪'
     }
 
-    @PendingFeature(reason = 'song info in pure parens/brackets is wrongly removed by isOnlySdhContent (checked before containsSongInfo); music-symbol guard preserves sound descriptions on lyric lines')
+    @PendingFeature(reason = 'music-symbol guard in processLine preserves the whole original line when ♪ is present, so sound descriptions on lyric lines are never cleaned')
     def 'music.srt — known bugs: #description'() {
         given:
             def results = cleanedByIndex('music.srt')
@@ -75,10 +79,6 @@ class SdhEdgeCasesSpec extends Specification {
             description                                                       | entryIndex | expectedText
             'sound desc on lyric line should be cleaned'                      | 3          | '♪ Na na na ♪'
             'humming sound desc on lyric line should be cleaned'              | 4          | '♪ La la la ♪'
-            'song info in parens should be kept'                              | 7          | '(Music: "Don\'t Stop Me Now" playing)'
-            'song info in parens with italics should be kept'                 | 8          | '<i>(music: "Sweet Child O\' Mine" by Guns N\' Roses playing)</i>'
-            'song info in brackets should be kept'                            | 10         | '["My Favourite Game" playing on stereo]'
-            '[music: "..." playing] song info in brackets should be kept'     | 11         | '[music: "Bohemian Rhapsody" playing]'
     }
 
     def 'mixed.srt — supported cases: #description'() {
