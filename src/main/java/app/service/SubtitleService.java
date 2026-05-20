@@ -2,6 +2,9 @@ package app.service;
 
 import app.model.FrameRate;
 import app.model.SubtitleEntry;
+import app.service.SubtitleChanges.ModifiedEntry;
+import app.service.SubtitleChanges.RemovalReason;
+import app.service.SubtitleChanges.RemovedEntry;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -9,7 +12,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class SubtitleService {
 
@@ -29,23 +38,69 @@ public class SubtitleService {
             throw new IllegalArgumentException("At least one cleaning option must be selected");
         }
 
-        List<SubtitleEntry> entries = SubtitleParserService.parseFile(inputFile);
-        int beforeSdh = entries.size();
-        List<SubtitleEntry> afterSdh = removeSdh ? SubtitleCleanerService.removeSdh(entries) : entries;
-        int sdhRemoved = beforeSdh - afterSdh.size();
-
+        List<SubtitleEntry> original = SubtitleParserService.parseFile(inputFile);
+        List<SubtitleEntry> afterSdh = removeSdh ? SubtitleCleanerService.removeSdh(original) : original;
         List<SubtitleEntry> afterSpam = removeSpam ? SubtitleCleanerService.removeSpam(afterSdh) : afterSdh;
-        int spamRemoved = afterSdh.size() - afterSpam.size();
 
         File outputFile = generateOutputFile(inputFile, suffixFor(removeSdh, removeSpam));
         writeSrt(outputFile, afterSpam);
-        return new CleanResult(outputFile, sdhRemoved, spamRemoved);
+
+        SubtitleChanges changes = computeChanges(inputFile, outputFile, removeSdh, removeSpam,
+                original, afterSdh, afterSpam);
+        File changesFile = changesLogFor(outputFile);
+        SubtitleChangesLogWriter.write(changesFile, changes);
+
+        long sdhRemoved = changes.removedEntries().stream().filter(re -> re.reason() == RemovalReason.SDH).count();
+        long spamRemoved = changes.removedEntries().stream().filter(re -> re.reason() == RemovalReason.SPAM).count();
+        return new CleanResult(outputFile, changesFile, (int) sdhRemoved, (int) spamRemoved, changes.modifiedEntries().size());
+    }
+
+    private SubtitleChanges computeChanges(File inputFile, File outputFile, boolean removeSdh, boolean removeSpam,
+                                           List<SubtitleEntry> original, List<SubtitleEntry> afterSdh,
+                                           List<SubtitleEntry> afterSpam) {
+        Set<Integer> survivedSdh = indices(afterSdh);
+        Set<Integer> survivedSpam = indices(afterSpam);
+
+        List<RemovedEntry> removed = new ArrayList<>();
+        for (SubtitleEntry origEntry : original) {
+            if (!survivedSdh.contains(origEntry.index())) {
+                removed.add(new RemovedEntry(origEntry, RemovalReason.SDH));
+            } else if (!survivedSpam.contains(origEntry.index())) {
+                removed.add(new RemovedEntry(origEntry, RemovalReason.SPAM));
+            }
+        }
+
+        Map<Integer, SubtitleEntry> originalByIndex = original.stream()
+                .collect(Collectors.toMap(SubtitleEntry::index, Function.identity()));
+        List<ModifiedEntry> modified = new ArrayList<>();
+        for (SubtitleEntry finalEntry : afterSpam) {
+            SubtitleEntry origEntry = originalByIndex.get(finalEntry.index());
+            if (origEntry != null && !origEntry.text().equals(finalEntry.text())) {
+                modified.add(new ModifiedEntry(origEntry, finalEntry));
+            }
+        }
+
+        int unchanged = afterSpam.size() - modified.size();
+        return new SubtitleChanges(inputFile, outputFile, removeSdh, removeSpam, removed, modified, unchanged);
+    }
+
+    private Set<Integer> indices(List<SubtitleEntry> entries) {
+        Set<Integer> result = new HashSet<>();
+        for (SubtitleEntry e : entries) result.add(e.index());
+        return result;
     }
 
     private String suffixFor(boolean removeSdh, boolean removeSpam) {
         if (removeSdh && removeSpam) return "_cleaned";
         if (removeSdh) return "_no_sdh";
         return "_no_spam";
+    }
+
+    private File changesLogFor(File outputFile) {
+        String name = outputFile.getName();
+        int dotIndex = name.lastIndexOf('.');
+        String baseName = (dotIndex == -1) ? name : name.substring(0, dotIndex);
+        return new File(outputFile.getParentFile(), baseName + "_changes.log");
     }
 
     public File createFrameRateConvertedSubtitles(File inputFile, FrameRate fromFrameRate, FrameRate toFrameRate) throws IOException {

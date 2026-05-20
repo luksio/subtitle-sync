@@ -106,7 +106,11 @@ public record SubtitleEntry(int index, Duration start, Duration end, String text
     }
 
     public String toSrtBlock() {
-        return "%d\n%s --> %s\n%s".formatted(index, formatTime(start), formatTime(end), text);
+        return "%d\n%s\n%s".formatted(index, formattedTimeline(), text);
+    }
+
+    public String formattedTimeline() {
+        return formatTime(start) + " --> " + formatTime(end);
     }
 
     private String formatTime(Duration duration) {

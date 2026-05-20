@@ -784,6 +784,7 @@ Downloaded from www.opensubtitles.org
         and: 'pure SDH entries (1 and 5) and the URL entry (4) are dropped, leaving only the dialog rows with their original indices'
             result.sdhRemoved() == 2
             result.spamRemoved() == 1
+            result.modified() == 1
             result.outputFile().text == '''2
 00:00:04,000 --> 00:00:06,000
 Buenos días
@@ -793,5 +794,134 @@ Buenos días
 Plain dialog line.
 
 '''
+    }
+
+    def 'should write a changes log next to the cleaned subtitles describing removed and modified entries'() {
+        given: 'SRT with one SDH-only entry, one modified entry, one untouched dialog and one URL entry'
+            def inputContent = '''1
+00:00:01,000 --> 00:00:03,000
+[thunder rumbling]
+
+2
+00:00:04,000 --> 00:00:06,000
+[in Spanish] Buenos días
+
+3
+00:00:07,000 --> 00:00:09,000
+Plain dialog line.
+
+4
+00:00:10,000 --> 00:00:12,000
+Downloaded from www.opensubtitles.org
+'''
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'movie.srt', inputContent)
+
+        when: 'cleaning with both options enabled'
+            def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
+
+        then: 'changes log sits next to the output and uses the .log extension'
+            result.changesFile().exists()
+            result.changesFile().name == 'movie_cleaned_changes.log'
+
+        and: 'log content describes header, summary, removed and modified entries'
+            result.changesFile().text == '''Subtitle Cleaning Report
+========================
+Input:   movie.srt
+Output:  movie_cleaned.srt
+Options: Remove SDH, Remove spam
+
+Summary
+-------
+Removed via SDH:    1 entry
+Removed via spam:   1 entry
+Modified by SDH:    1 entry
+Kept unchanged:     1 entry
+
+Removed entries
+---------------
+
+#1  00:00:01,000 --> 00:00:03,000  (via SDH)
+    [thunder rumbling]
+
+#4  00:00:10,000 --> 00:00:12,000  (via spam)
+    Downloaded from www.opensubtitles.org
+
+Modified entries
+----------------
+
+#2  00:00:04,000 --> 00:00:06,000
+    [in Spanish] Buenos días
+  →
+    Buenos días
+
+'''
+    }
+
+    def 'should write a changes log noting that no changes were made when input has no SDH or spam'() {
+        given: 'SRT with only plain dialog'
+            def inputContent = '''1
+00:00:01,000 --> 00:00:03,000
+First plain line.
+
+2
+00:00:04,000 --> 00:00:06,000
+Second plain line.
+'''
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'clean.srt', inputContent)
+
+        when: 'cleaning with both options enabled'
+            def result = subtitleService.createCleanedSubtitles(inputFile, true, true)
+
+        then: 'counts are zero and log reports no changes'
+            result.sdhRemoved() == 0
+            result.spamRemoved() == 0
+            result.modified() == 0
+            result.changesFile().text == '''Subtitle Cleaning Report
+========================
+Input:   clean.srt
+Output:  clean_cleaned.srt
+Options: Remove SDH, Remove spam
+
+Summary
+-------
+Removed via SDH:    0 entries
+Removed via spam:   0 entries
+Modified by SDH:    0 entries
+Kept unchanged:     2 entries
+
+No changes were made.
+
+'''
+    }
+
+    def 'should preserve multi-line text in the changes log'() {
+        given: 'SRT with a multi-line modified entry and a multi-line removed entry'
+            def inputContent = '''1
+00:00:25,000 --> 00:00:27,000
+(PHONE RINGING)
+(DOOR KNOCKING)
+
+2
+00:00:49,000 --> 00:00:51,000
+[boy] She sleepwalks sometimes
+since our parents died.
+'''
+            def inputFile = TestFileUtils.createTempSrtFile(tempDir, 'multi.srt', inputContent)
+
+        when: 'cleaning SDH only'
+            def result = subtitleService.createCleanedSubtitles(inputFile, true, false)
+
+        then: 'each multi-line block is indented line-by-line, with the arrow separator between before and after'
+            result.changesFile().text.contains('''#1  00:00:25,000 --> 00:00:27,000  (via SDH)
+    (PHONE RINGING)
+    (DOOR KNOCKING)
+''')
+            result.changesFile().text.contains('''#2  00:00:49,000 --> 00:00:51,000
+    [boy] She sleepwalks sometimes
+    since our parents died.
+  →
+    She sleepwalks sometimes
+    since our parents died.
+''')
     }
 }

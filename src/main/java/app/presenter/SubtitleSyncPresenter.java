@@ -127,12 +127,16 @@ public class SubtitleSyncPresenter {
 
     private String buildCleaningSummary(CleanResult result, boolean removeSdh, boolean removeSpam) {
         StringBuilder sb = new StringBuilder("Cleaned subtitles saved as:\n")
-                .append(result.outputFile().getName());
+                .append(result.outputFile().getName())
+                .append("\nChanges log: ").append(result.changesFile().getName());
         if (removeSdh) {
             sb.append("\nRemoved ").append(result.sdhRemoved()).append(" SDH entries");
         }
         if (removeSpam) {
             sb.append("\nRemoved ").append(result.spamRemoved()).append(" spam entries");
+        }
+        if (removeSdh) {
+            sb.append("\nModified ").append(result.modified()).append(" entries");
         }
         return sb.toString();
     }
