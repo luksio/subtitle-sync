@@ -6,6 +6,9 @@ import javax.swing.*;
 
 public class SubtitleSyncApp {
     public static void main(String[] args) {
+        // Follow system appearance on macOS (dark mode picker + window). No-op on other OSes.
+        System.setProperty("apple.awt.application.appearance", "system");
+
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Subtitle Sync");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
