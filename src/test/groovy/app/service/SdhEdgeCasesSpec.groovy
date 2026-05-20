@@ -28,31 +28,19 @@ class SdhEdgeCasesSpec extends Specification {
 
         where:
             description                                | entryIndex | expectedText
+            'OFFICER #1: speaker with "#"'             | 1          | 'Stop right there'
+            'DR. SMITH: speaker with "."'              | 2          | 'What happened?'
+            '[JOSÉ]: trailing colon stripped'          | 3          | '¿Qué pasa?'
+            'MÜLLER (shouting): non-ASCII speaker'     | 4          | 'Halt!'
+            'MAN #2 (OFF-SCREEN): speaker with "#"'    | 5          | 'Over here!'
             '[GIRL, 5 YEARS OLD] uppercase bracket'    | 6          | 'I want ice cream'
+            "CAPTAIN O'BRIEN: speaker with apostrophe" | 7          | 'Ready the ship'
+            '[MAN 1 & MAN 2]: trailing colon stripped' | 8          | 'Together we stand'
             '[boy] lowercase bracket'                  | 9          | 'She sleepwalks sometimes.'
             '[woman on TV] lowercase + spaces'         | 10         | 'No, thanks.'
             '[man] single-word lowercase'              | 11         | 'You should tell your brother.'
             '[Wesker] mixed-case character name'       | 12         | 'Hey!'
             '[Jill] mixed-case character name'         | 13         | 'Come on, just through here.'
-    }
-
-    @PendingFeature(reason = 'SPEAKER_NAME regex breaks on non-letter chars (#, ., \', non-ASCII) and trailing colons after bracket speakers are not stripped')
-    def 'speakers.srt — known bugs: #description'() {
-        given:
-            def results = cleanedByIndex('speakers.srt')
-
-        expect:
-            results[entryIndex] == expectedText
-
-        where:
-            description                                       | entryIndex | expectedText
-            'OFFICER #1: speaker with "#"'                    | 1          | 'Stop right there'
-            'DR. SMITH: speaker with "."'                     | 2          | 'What happened?'
-            '[JOSÉ]: trailing colon left over'                | 3          | '¿Qué pasa?'
-            'MÜLLER (shouting): non-ASCII speaker'            | 4          | 'Halt!'
-            'MAN #2 (OFF-SCREEN): speaker with "#"'           | 5          | 'Over here!'
-            "CAPTAIN O'BRIEN: speaker with apostrophe"        | 7          | 'Ready the ship'
-            '[MAN 1 & MAN 2]: trailing colon left over'       | 8          | 'Together we stand'
     }
 
     def 'music.srt — supported cases: #description'() {
@@ -102,6 +90,7 @@ class SdhEdgeCasesSpec extends Specification {
 
         where:
             description                                                | entryIndex | expectedText
+            'double speaker [GIRL] MARY: both removed'                 | 1          | 'Hello'
             'two bracket sound descs at start removed'                 | 2          | 'Hello there'
             'JOHN (quietly): full speaker with parens removed'         | 3          | "I can't believe it"
             'multi-line bracket speakers with dashes'                  | 4          | '-Hey there\n-What\'s up?'
@@ -112,7 +101,7 @@ class SdhEdgeCasesSpec extends Specification {
             '(John sighs) pure paren entry removed'                    | 13         | null
     }
 
-    @PendingFeature(reason = 'mid-sentence bracketed SDH not removed; speaker name regex not re-run after bracket speaker stripping; italic-wrapped bracket speakers not detected; music-symbol guard preserves sound descs')
+    @PendingFeature(reason = 'mid-sentence bracketed SDH not removed; italic-wrapped bracket speakers not detected; music-symbol guard preserves sound descs')
     def 'mixed.srt — known bugs: #description'() {
         given:
             def results = cleanedByIndex('mixed.srt')
@@ -122,7 +111,6 @@ class SdhEdgeCasesSpec extends Specification {
 
         where:
             description                                                          | entryIndex | expectedText
-            'double speaker [GIRL] MARY: both should be removed'                 | 1          | 'Hello'
             '(music playing) ♪ La la la ♪ — sound desc should be removed'        | 5          | '♪ La la la ♪'
             '<i>[NARRATOR] (softly) ...</i> — speaker inside italics'            | 7          | '<i>Once upon a time</i>'
             'multi-line with second line being only-SDH'                         | 8          | 'Morning'
